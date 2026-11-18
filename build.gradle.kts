@@ -12,6 +12,7 @@ dependencies {
     compileOnly("io.papermc.paper:paper-api:26.3.build.252-stable")
     compileOnly("net.luckperms:api:5.4")
     testImplementation("org.junit.jupiter:junit-jupiter:5.11.4")
+    testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 }
 
 java { toolchain.languageVersion.set(JavaLanguageVersion.of(25)) }
