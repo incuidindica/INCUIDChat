@@ -1,0 +1,6 @@
+# Reserved for configurable player-facing messages in later phases.
+plugin-prefix: '<gray>[<gold>INCUID<gray>] '
+healthbar-hidden: '<yellow>Your health bar is hidden.'
+healthbar-visible: '<green>Your health bar is visible.'
+mentions-disabled: '<yellow>Mention sounds disabled.'
+mentions-enabled: '<green>Mention sounds enabled.'

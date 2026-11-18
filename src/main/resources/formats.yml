@@ -1,0 +1,3 @@
+# Phase 1 chat layout is built from safe Adventure components.
+# Player-provided messages are never parsed as MiniMessage.
+# The renderer uses: {health} {prefix}{player}{suffix}{separator}{message}

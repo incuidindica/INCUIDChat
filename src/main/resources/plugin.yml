@@ -1,0 +1,22 @@
+name: INCUIDChat
+version: 1.0.0-phase1
+main: com.incuid.chat.IncuidChatPlugin
+api-version: '26.3'
+author: INCUID
+description: Immersive, lightweight INCUID survival chat
+softdepend: [LuckPerms, PlaceholderAPI]
+permissions:
+  incuidchat.admin:
+    default: op
+  incuidchat.reload:
+    default: op
+  incuidchat.health:
+    default: true
+  incuidchat.health.hide:
+    default: true
+  incuidchat.mentions:
+    default: true
+  incuidchat.mentions.everyone:
+    default: op
+  incuidchat.chat.color:
+    default: op

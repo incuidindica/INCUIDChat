@@ -1,0 +1,44 @@
+# INCUID Chat — Phase 1. Changes apply with /ic reload.
+health:
+  enabled: true
+  segments: 10 # Version 1 supports 10 segments only.
+  filled-symbol: '|'
+  empty-symbol: '.'
+  show-brackets: true
+  hearts: false # true uses ❤ and ♡, with ten positions
+  thresholds:
+    healthy: 75.0
+    injured: 50.0
+  colors:
+    healthy: '#55FF55'
+    injured: '#FFDD55'
+    critical: '#FF5555'
+    dead: '#555555'
+    empty: '#555555'
+  hover:
+    enabled: true
+  visibility:
+    allow-player-toggle: true
+    default-visible: true
+chat:
+  enabled: true
+  separator: ' » '
+  player-color: '#FFFFFF'
+  message-color: '#EEEEEE'
+  name-hover: true
+  name-click-suggest-msg: true
+  allow-permission-colors: false # Reserved for a later release
+mentions:
+  enabled: true
+  highlight-color: '#FFAA00'
+  sound: 'BLOCK_NOTE_BLOCK_PLING'
+  cooldown-seconds: 10
+  everyone-enabled: true
+  everyone-cooldown-seconds: 60
+  sound-volume: 0.6
+  sound-pitch: 1.25
+integrations:
+  luckperms-prefix: true
+  luckperms-suffix: true
+experimental:
+  enabled: false
