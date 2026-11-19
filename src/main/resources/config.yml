@@ -5,7 +5,8 @@ health:
   filled-symbol: '|'
   empty-symbol: '.'
   show-brackets: true
-  hearts: false # true uses ❤ and ♡, with ten positions
+  hearts: false # true uses ❤ and ♡ for the BARS style (ten positions)
+  # Players choose /ic healthstyle bars or heart; default is bars.
   thresholds:
     healthy: 75.0
     injured: 50.0

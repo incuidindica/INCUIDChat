@@ -15,7 +15,7 @@ public final class ChatFormatter {
     private ChatFormatter() { }
     public static Component format(PlayerSnapshot p, Component message, ChatSettings s) {
         Component result = Component.empty();
-        if (s.healthEnabled() && !p.hiddenHealth()) result = result.append(HealthBar.render(p.username(), p.health(), s)).append(Component.space());
+        if (s.healthEnabled() && !p.hiddenHealth()) result = result.append(HealthBar.render(p.username(), p.health(), s, p.style())).append(Component.space());
         if (s.luckPrefix()) result = result.append(safeMeta(p.prefix()));
         Component name = Component.text(p.username(), TextColor.fromHexString(s.playerColor()));
         if (s.nameHover()) name = name.hoverEvent(HoverEvent.showText(Component.text("Player: " + p.username())));
