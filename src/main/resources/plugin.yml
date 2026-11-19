@@ -1,5 +1,5 @@
 name: INCUIDChat
-version: 1.1.2-phase2
+version: 1.2.0-phase3
 main: com.incuid.chat.IncuidChatPlugin
 api-version: '26.3'
 author: INCUID
@@ -30,3 +30,5 @@ permissions:
     default: true
   incuidchat.pm.bypass:
     default: op
+  incuidchat.afk:
+    default: true

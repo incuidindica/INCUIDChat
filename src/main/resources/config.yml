@@ -62,3 +62,31 @@ private-messages:
   register-short-aliases: false
   sound:
     enabled: false
+
+# Phase 3: immersive community announcements (each module optional).
+announcements:
+  join:
+    enabled: true
+    format: '<gray>✦ <white>{player}</white> joined the world.</gray>'
+  leave:
+    enabled: true
+    format: '<gray>✦ <white>{player}</white> left the world.</gray>'
+  first-join:
+    enabled: true
+    public-format: '<gold>✦ Welcome to INCUID, {player}!</gold>'
+    private-welcome: true
+    private-format: '<gray>Welcome to INCUID! Visit <aqua>playincuid.com</aqua></gray>'
+  death:
+    enabled: true
+    prefix: '<red>☠ </red>'
+    private-coordinates: true
+  advancement:
+    enabled: true
+    prefix: '<gold>✦ </gold>'
+
+# AFK status is per player, cleared on reconnect or when chatting.
+# [AFK] brackets are white (#FFFFFF); AFK letters are red (#FF5555).
+afk:
+  enabled: true
+  clear-on-chat: true
+  broadcast: false

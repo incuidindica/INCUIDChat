@@ -71,3 +71,25 @@ Short command alias registration occurs on plugin startup. Some servers already 
 ## Test for viewer-local health
 
 Use two logged-in players. Player A: `/ic healthstyle heart`; Player B: `/ic healthstyle bars`. Have Player B send a chat message. A should see a heart before B's name, while B sees the ten-segment bar. Next A runs `/ic healthbar` and B sends another message: A sees no health icon, B continues seeing bars. Restart Paper and repeat to verify persistence. The two choices are viewing preferences; they do not alter health values, hover contents, sender messages, or others' settings.
+
+---
+
+## Phase 3 — Community announcements and AFK (1.2.0-phase3)
+
+Phase 3 extends all earlier Phase 1/2 functionality. The existing viewer-local bars/hearts, white health brackets, `[item]`, `[coords]`, private messaging, and saved preferences remain present.
+
+### /afk
+
+Players with `incuidchat.afk` (default: everybody) can use `/afk` to toggle away status. Their Tab-list name becomes **[AFK] PlayerName**, using **white `[` and `]` brackets** and **red `AFK` letters**. Their pre-AFK Tab-list component is restored upon returning. AFK state is in-memory, and is cleared on logout/restart; it is not a persistent player preference. Typing in regular chat also clears AFK by default; set `afk.clear-on-chat: false` if you want strictly manual toggling. Optional `afk.broadcast` is disabled by default to avoid chat spam.
+
+When a private message is successfully delivered to an AFK recipient, its sender receives a short `[AFK] PlayerName is currently away and may not respond.` notification. The message still reaches the recipient. This applies to `/incuidmsg` and `/incuidreply`, and to short aliases if enabled. If another plugin owns `/msg`, its messages do **not** automatically integrate with INCUID AFK notifications.
+
+### Announcements
+
+The `announcements` section of `config.yml` controls join, first join, quit, death, and advancement modules independently. Formats use MiniMessage. Join/quit messages replace event messages; deaths and vanilla-eligible advancements decorate the existing event Component to preserve underlying vanilla information and hover behavior. Recipe/root advancements that Minecraft does not announce are left unannounced. Death coordinates are sent **privately** only to the deceased player when enabled; they are never globally broadcast by this module. The original death message (and gamerule visibility) is respected.
+
+**Existing servers:** Keep `plugins/INCUIDChat/players.yml` and your other existing configuration files. `saveDefaultConfig()` preserves your existing config; if you want to customize Phase 3 options, copy the new `announcements` and `afk` YAML sections into your existing `config.yml`. If absent, Phase 3 features use the documented defaults. Run `/ic reload` after editing config. The new `/afk` command requires a full restart after updating the JAR.
+
+**Compatibility:** Other plugins that change Tab-list names while a player is AFK may compete with the saved/restored component; if you run a Tab formatting plugin, check integration behavior in-game. Other join/death/advancement formatters may also override event messages, so avoid enabling competing modules twice.
+
+**Build:** `gradle clean test build` with Java 25 and Gradle 9.2.1, or use GitHub Actions. A successfully compiled JAR appears in `build/libs/` and is downloadable as the `INCUIDChat-Phase3-JAR` workflow artifact. A green build does not replace in-game verification.

@@ -1,7 +1,7 @@
 plugins { java }
 
 group = "com.incuid"
-version = "1.1.2-phase2"
+version = "1.2.0-phase3"
 
 repositories {
     mavenCentral()

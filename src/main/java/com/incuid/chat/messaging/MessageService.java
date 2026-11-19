@@ -1,6 +1,7 @@
 package com.incuid.chat.messaging;
 
 import com.incuid.chat.IncuidChatPlugin;
+import com.incuid.chat.community.AfkService;
 import com.incuid.chat.storage.PlayerPreferences;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
@@ -16,8 +17,9 @@ import java.util.concurrent.ConcurrentHashMap;
 public final class MessageService {
     private final IncuidChatPlugin plugin;
     private final PlayerPreferences prefs;
+    private final AfkService afk;
     private final Map<UUID,UUID> lastPartner = new ConcurrentHashMap<>();
-    public MessageService(IncuidChatPlugin plugin,PlayerPreferences prefs) { this.plugin=plugin;this.prefs=prefs; }
+    public MessageService(IncuidChatPlugin plugin,PlayerPreferences prefs,AfkService afk) { this.plugin=plugin;this.prefs=prefs;this.afk=afk; }
     private static void say(CommandSender sender,String message) { sender.sendMessage(Component.text(message)); }
     private static Player player(CommandSourceStack stack) {
         if (stack.getSender() instanceof Player p) return p;
@@ -42,6 +44,9 @@ public final class MessageService {
                 .append(Component.text(content,TextColor.color(0xEEEEEE))));
         target.sendMessage(Component.text("[From "+source.getName()+"] ",TextColor.color(0xFFCC66))
                 .append(Component.text(content,TextColor.color(0xEEEEEE))));
+        if (afk.enabled() && afk.isAfk(target.getUniqueId())) {
+            source.sendMessage(AfkService.label().append(Component.text(" "+target.getName()+" is currently away and may not respond.",TextColor.color(0xAAAAAA))));
+        }
         lastPartner.put(source.getUniqueId(),target.getUniqueId());
         lastPartner.put(target.getUniqueId(),source.getUniqueId());
         if (plugin.getConfig().getBoolean("private-messages.sound.enabled",false)) {

@@ -1,6 +1,8 @@
 package com.incuid.chat;
 
 import com.incuid.chat.chat.ChatFormatter;
+import com.incuid.chat.community.AfkService;
+import com.incuid.chat.community.CommunityAnnouncements;
 import com.incuid.chat.chat.PlayerSnapshot;
 import com.incuid.chat.commands.IncuidCommand;
 import com.incuid.chat.config.ChatSettings;
@@ -28,6 +30,7 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     private record InteractiveConfig(boolean items,boolean coords,int maxItems,int maxCoords,int maxBytes) { }
     private PlayerPreferences preferences;
     private MessageService messages;
+    private AfkService afk;
     private final ConcurrentMap<UUID,Long> mentionCooldown = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID,Long> everyoneCooldown = new ConcurrentHashMap<>();
 
@@ -38,7 +41,11 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         }
         reloadSettings();
         preferences = new PlayerPreferences(this);
-        messages = new MessageService(this,preferences);
+        afk = new AfkService(this);
+        messages = new MessageService(this,preferences,afk);
+        Bukkit.getPluginManager().registerEvents(afk,this);
+        Bukkit.getPluginManager().registerEvents(new CommunityAnnouncements(this),this);
+        registerCommand("afk","Toggle away-from-keyboard status",List.of(),afk);
         Bukkit.getPluginManager().registerEvents(this,this);
         registerCommand("incuidchat", "INCUID Chat management", List.of("ic"), new IncuidCommand(this));
         if (getConfig().getBoolean("private-messages.enabled", true)) {
@@ -49,11 +56,12 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
             registerCommand("incuidignorelist","List ignored players",shortAliases("ignorelist"),messages.command("ignorelist"));
             registerCommand("incuidmsgtoggle","Toggle messages",shortAliases("msgtoggle"),messages.command("msgtoggle"));
         }
-        getLogger().info("INCUID Chat Phase 2 viewer-local health enabled (Paper 26.3, interactive tags and private messages)");
+        getLogger().info("INCUID Chat Phase 3 enabled (community announcements, AFK, interactive chat)");
     }
     public void reloadSettings() {
         reloadConfig();
         settings = ChatSettings.load(getConfig());
+        if (afk != null && !getConfig().getBoolean("afk.enabled",true)) afk.shutdown();
         interactiveConfig = new InteractiveConfig(
                 getConfig().getBoolean("interactive.items.enabled",true),
                 getConfig().getBoolean("interactive.coordinates.enabled",true),
@@ -83,6 +91,8 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     public void onChat(AsyncChatEvent event) {
         ChatSettings cfg = settings;
         if (!cfg.chatEnabled()) return;
+        if (Bukkit.isPrimaryThread()) afk.onChat(event.getPlayer());
+        else Bukkit.getScheduler().runTask(this, () -> afk.onChat(event.getPlayer()));
         final UUID sourceId = event.getPlayer().getUniqueId();
         String plainMessage = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message()).toLowerCase(java.util.Locale.ROOT);
         boolean wantsItem = plainMessage.contains("[item]");
@@ -162,6 +172,7 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     }
     @Override public void onDisable() {
         mentionCooldown.clear(); everyoneCooldown.clear();
+        if (afk != null) afk.shutdown();
         if (messages != null) messages.close();
         if (preferences != null) preferences.close();
     }
