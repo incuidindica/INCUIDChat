@@ -13,12 +13,13 @@ This is a **Phase 1 source release**, NOT the completed five-phase plugin. It is
 - Optional LuckPerms prefix/suffix through LuckPerms API, gracefully absent if not installed.
 - Click player name to suggest `/msg Player ` and hover their username.
 - Online-player `@mentions` and permission-restricted `@everyone`, with sound throttling and toggles.
-- `/ic help`, `/ic status`, `/ic version`, `/ic reload`, `/ic healthbar`, `/ic mentions`.
+- `/ic help`, `/ic status`, `/ic version`, `/ic reload`, `/ic healthbar`, `/ic healthstyle bars|heart`, `/ic mentions`.
+- Player-selected **bars** (10 positions, default) or **single heart** health indicator; both have identical hover details. Heart is colored green/yellow/red/gray based on actual health percentage. Style is saved to `plugins/INCUIDChat/players.yml` across restarts and shown with the speaker’s messages to all viewers.
 - YAML settings with reload, validated health thresholds and hex colors.
 
 ## Not included yet
 
-Phase 2 item/coords tags, private messages, persisted preferences; Phase 3 join/death/advancement announcements; Phase 4 moderation; Phase 5 channels and extras. PlaceholderAPI is declared as optional metadata only and is **not integrated yet**. The sample `filters.yml`, `formats.yml`, and `messages.yml` are reserved for future phases; their content is not yet used to drive rendering. Player toggles are currently **session-only**, not persisted.
+Phase 2 item/coords tags, private messages, other persisted preferences; Phase 3 join/death/advancement announcements; Phase 4 moderation; Phase 5 channels and extras. PlaceholderAPI is declared as optional metadata only and is **not integrated yet**. The sample `filters.yml`, `formats.yml`, and `messages.yml` are reserved for future phases; their content is not yet used to drive rendering. Health style preferences persist across restarts; health visibility and mention sound toggles are **session-only**.
 
 ## Build
 
@@ -41,9 +42,12 @@ Copy the JAR into `plugins/` on a **Paper 26.3** server running **Java 25**, res
 | `/ic version` | Version info | everyone |
 | `/ic reload` | Reload config | `incuidchat.reload` or `incuidchat.admin` |
 | `/ic healthbar` | Toggle your health bar | `incuidchat.health.hide` |
+| `/ic healthstyle` | Show your chosen indicator style | `incuidchat.health.style` |
+| `/ic healthstyle bars` | Use the default ten-segment indicator | `incuidchat.health.style` |
+| `/ic healthstyle heart` | Use a single color-changing heart | `incuidchat.health.style` |
 | `/ic mentions` | Toggle sounds for your mentions | `incuidchat.mentions` |
 
-Permission defaults: `incuidchat.admin`, `incuidchat.reload`, `incuidchat.mentions.everyone`, `incuidchat.chat.color` => op; `incuidchat.health`, `incuidchat.health.hide`, `incuidchat.mentions` => everyone. `incuidchat.chat.color` is reserved and does not activate player formatting in Phase 1.
+Permission defaults: `incuidchat.admin`, `incuidchat.reload`, `incuidchat.mentions.everyone`, `incuidchat.chat.color` => op; `incuidchat.health`, `incuidchat.health.hide`, `incuidchat.health.style`, `incuidchat.mentions` => everyone. `incuidchat.chat.color` is reserved and does not activate player formatting in Phase 1.
 
 ## Concurrency and signed chat
 

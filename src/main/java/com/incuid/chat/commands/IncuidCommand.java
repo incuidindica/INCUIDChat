@@ -1,6 +1,7 @@
 package com.incuid.chat.commands;
 
 import com.incuid.chat.IncuidChatPlugin;
+import com.incuid.chat.health.HealthStyle;
 import io.papermc.paper.command.brigadier.BasicCommand;
 import io.papermc.paper.command.brigadier.CommandSourceStack;
 import net.kyori.adventure.text.Component;
@@ -15,7 +16,7 @@ public final class IncuidCommand implements BasicCommand {
         CommandSender sender=stack.getSender();
         String sub=args.length==0 ? "help" : args[0].toLowerCase(java.util.Locale.ROOT);
         switch (sub) {
-            case "help" -> sender.sendMessage(Component.text("INCUID Chat: /ic help, status, version, reload, healthbar, mentions"));
+            case "help" -> sender.sendMessage(Component.text("INCUID Chat: /ic help, status, version, reload, healthbar, healthstyle [bars|heart], mentions"));
             case "status" -> sender.sendMessage(Component.text("INCUID Chat Phase 1 | Health: " + plugin.settings().healthEnabled()
                     + " | Chat: " + plugin.settings().chatEnabled() + " | Mentions: " + plugin.settings().mentionEnabled()));
             case "version" -> sender.sendMessage(Component.text("INCUID Chat 1.0.0-phase1 for Paper 26.3"));
@@ -29,6 +30,22 @@ public final class IncuidCommand implements BasicCommand {
                 boolean visible=plugin.toggleHealth(player.getUniqueId());
                 sender.sendMessage(Component.text("Your health bar is now " + (visible?"visible":"hidden") + "."));
             }
+            case "healthstyle" -> {
+                if (!(sender instanceof Player player)) { sender.sendMessage(Component.text("Players only.")); return; }
+                if (!player.hasPermission("incuidchat.health.style")) { deny(sender); return; }
+                if (args.length == 1) {
+                    sender.sendMessage(Component.text("Your health display: " + plugin.healthStyle(player.getUniqueId()).settingValue()
+                            + ". Choose /ic healthstyle bars or /ic healthstyle heart."));
+                    return;
+                }
+                if (args.length != 2 || HealthStyle.parse(args[1]) == null) {
+                    sender.sendMessage(Component.text("Usage: /ic healthstyle <bars|heart>")); return;
+                }
+                HealthStyle selected = HealthStyle.parse(args[1]);
+                boolean saved = plugin.setHealthStyle(player.getUniqueId(), selected);
+                sender.sendMessage(Component.text("Your health indicator is now " + selected.settingValue()
+                        + ". " + (saved ? "Preference saved." : "Warning: preference could not be saved to disk.")));
+            }
             case "mentions" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage(Component.text("Players only.")); return; }
                 if (!player.hasPermission("incuidchat.mentions")) { deny(sender); return; }
@@ -40,10 +57,16 @@ public final class IncuidCommand implements BasicCommand {
     }
     private static void deny(CommandSender sender) { sender.sendMessage(Component.text("You do not have permission.")); }
     @Override public java.util.Collection<String> suggest(CommandSourceStack stack, String[] args) {
+        if (args.length == 2 && args[0].equalsIgnoreCase("healthstyle")) {
+            if (!stack.getSender().hasPermission("incuidchat.health.style")) return List.of();
+            return List.of("bars", "heart").stream()
+                    .filter(s -> s.startsWith(args[1].toLowerCase(java.util.Locale.ROOT))).toList();
+        }
         if (args.length != 1) return List.of();
-        return List.of("help","status","version","reload","healthbar","mentions").stream()
+        return List.of("help","status","version","reload","healthbar","healthstyle","mentions").stream()
             .filter(s -> s.startsWith(args[0].toLowerCase(java.util.Locale.ROOT)))
             .filter(s -> !s.equals("reload") || stack.getSender().hasPermission("incuidchat.reload"))
+            .filter(s -> !s.equals("healthstyle") || stack.getSender().hasPermission("incuidchat.health.style"))
             .toList();
     }
 }

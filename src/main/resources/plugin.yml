@@ -14,6 +14,8 @@ permissions:
     default: true
   incuidchat.health.hide:
     default: true
+  incuidchat.health.style:
+    default: true
   incuidchat.mentions:
     default: true
   incuidchat.mentions.everyone:
