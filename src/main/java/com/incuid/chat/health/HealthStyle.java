@@ -2,7 +2,7 @@ package com.incuid.chat.health;
 
 import java.util.Locale;
 
-/** Player-selected appearance of the indicator preceding their chat messages. */
+/** Viewer-selected appearance of health indicators in received chat messages. */
 public enum HealthStyle {
     BARS, HEART;
 

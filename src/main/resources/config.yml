@@ -1,4 +1,4 @@
-# INCUID Chat — Phase 1. Changes apply with /ic reload.
+# INCUID Chat — Phase 2. Changes apply with /ic reload.
 health:
   enabled: true
   segments: 10 # Version 1 supports 10 segments only.
@@ -6,7 +6,8 @@ health:
   empty-symbol: '.'
   show-brackets: true
   hearts: false # true uses ❤ and ♡ for the BARS style (ten positions)
-  # Players choose /ic healthstyle bars or heart; default is bars.
+  # Each viewer chooses their own chat display using /ic healthstyle bars or heart.
+  # /ic healthbar controls whether YOU see health indicators for anyone in chat.
   thresholds:
     healthy: 75.0
     injured: 50.0
@@ -43,3 +44,21 @@ integrations:
   luckperms-suffix: true
 experimental:
   enabled: false
+
+# Phase 2: Chat tokens. Disabled tags remain literal text.
+interactive:
+  items:
+    enabled: true
+    max-tags: 1 # maximum replacements per message (0..3)
+    max-hover-bytes: 8192 # skip oversized custom item metadata
+  coordinates:
+    enabled: true
+    max-tags: 1
+
+# Private messages use /incuidmsg etc. to avoid collisions with EssentialsX.
+# Set register-short-aliases to true only if no other plugin owns /msg and /reply.
+private-messages:
+  enabled: true
+  register-short-aliases: false
+  sound:
+    enabled: false

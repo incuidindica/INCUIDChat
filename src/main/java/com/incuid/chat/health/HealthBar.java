@@ -21,13 +21,13 @@ public final class HealthBar {
             Component heart = Component.text("❤", TextColor.fromHexString(selected));
             return settings.healthHover() ? heart.hoverEvent(HoverEvent.showText(hoverText(playerName, hp))) : heart;
         }
-        Component bar = settings.brackets() ? Component.text("[", TextColor.color(0x888888)) : Component.empty();
+        Component bar = settings.brackets() ? Component.text("[", TextColor.color(0xFFFFFF)) : Component.empty();
         for (int i=0; i<10; i++) {
             boolean filled = i < hp.filled();
             bar = bar.append(Component.text(filled ? fill : empty,
                     TextColor.fromHexString(filled ? selected : settings.emptyColor())));
         }
-        if (settings.brackets()) bar = bar.append(Component.text("]", TextColor.color(0x888888)));
+        if (settings.brackets()) bar = bar.append(Component.text("]", TextColor.color(0xFFFFFF)));
         if (settings.healthHover()) bar = bar.hoverEvent(HoverEvent.showText(hoverText(playerName, hp)));
         return bar;
     }

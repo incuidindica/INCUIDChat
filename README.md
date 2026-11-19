@@ -1,96 +1,73 @@
-# INCUID Chat — Phase 1 developer build
+# INCUID Chat — Phase 2 — viewer-local health and white brackets (v1.1.2-phase2)
 
-**Target**: Minecraft/Paper 26.3, Java 25, Gradle Kotlin DSL, plugin version `1.0.0-phase1`.
+Minecraft **Paper 26.3**, **Java 25**, Gradle 9.2.1, Adventure API. No required companion plugins. LuckPerms optional.
 
-This is a **Phase 1 source release**, NOT the completed five-phase plugin. It is **not build-verified** in the creation environment (Java 25/Gradle unavailable). Do not deploy to production without successfully compiling and smoke-testing against your Paper 26.3 server.
+## Included
 
-## Features included
+**New in v1.1.2:** Ten-segment health bar brackets (`[` and `]`) are always white (`#FFFFFF`). The filled segments still use the configurable green/yellow/red/gray health color, and unfilled segments retain the configured empty color. Single-heart display, hover details, per-viewer settings, and all Phase 2 features are unchanged.
 
-- Paper `AsyncChatEvent` renderer using Adventure components.
-- Always exactly ten health positions, ceiling-filled, with configurable glyphs, thresholds and colors.
-- Player health hovering shows current/max health, percentage and condition.
-- Server-thread health and metadata capture at chat time (no repeating health polling tasks).
-- Optional LuckPerms prefix/suffix through LuckPerms API, gracefully absent if not installed.
-- Click player name to suggest `/msg Player ` and hover their username.
-- Online-player `@mentions` and permission-restricted `@everyone`, with sound throttling and toggles.
-- `/ic help`, `/ic status`, `/ic version`, `/ic reload`, `/ic healthbar`, `/ic healthstyle bars|heart`, `/ic mentions`.
-- Player-selected **bars** (10 positions, default) or **single heart** health indicator; both have identical hover details. Heart is colored green/yellow/red/gray based on actual health percentage. Style is saved to `plugins/INCUIDChat/players.yml` across restarts and shown with the speaker’s messages to all viewers.
-- YAML settings with reload, validated health thresholds and hex colors.
+**Retained from Phase 1.1:** Adventure chat renderer, exact ten-segment health bars, 1-heart alternative (`/ic healthstyle heart`), health hover, mentions, optional LuckPerms prefix/suffix, and the `/ic` management commands.
 
-## Not included yet
+**Viewer-local health display fix (retained from v1.1.1):** `/ic healthstyle bars|heart` changes how **you see every player's health** in chat, without changing other players' displays. `/ic healthbar` toggles whether **you see** health indicators in chat. Player A can see hearts while Player B sees bars or nothing for the very same chat message. The sender's HP is still captured once per message, and the viewer's preference is read by UUID during per-recipient rendering. Console output uses server defaults. The preferences remain in the existing `players.yml` format, so no reset is necessary. Styles selected before this update will now apply to the viewers who chose them (not to their own outgoing indicator for everybody).
 
-Phase 2 item/coords tags, private messages, other persisted preferences; Phase 3 join/death/advancement announcements; Phase 4 moderation; Phase 5 channels and extras. PlaceholderAPI is declared as optional metadata only and is **not integrated yet**. The sample `filters.yml`, `formats.yml`, and `messages.yml` are reserved for future phases; their content is not yet used to drive rendering. Health style preferences persist across restarts; health visibility and mention sound toggles are **session-only**.
+**New in Phase 2:**
 
-## Build
+- `[item]`: renders the held item with its actual Minecraft item hover preview, including supported metadata. Max 1 occurrence per message by default; rejects metadata larger than 8 KiB. Empty hand shows `[empty hand]`.
+- `[coords]`: renders integer block coordinates with exact location/world hover and a **click-to-suggest** coordinate string. This safely populates chat input (it does **not** directly copy to the clipboard).
+- UUID-based player preferences persisted to `plugins/INCUIDChat/players.yml`: health style, health visibility, mention notification toggle, private message toggle, and ignore lists.
+- `/incuidmsg <player> <message>`, `/incuidreply <message>`, `/incuidignore <online player>`, `/incuidunignore <online player>`, `/incuidignorelist`, `/incuidmsgtoggle`.
+- Existing `messages.yml`, `formats.yml`, `filters.yml` are left untouched during restart. Their initial defaults are written only when absent.
 
-Install JDK 25 and Gradle 9.2+ (or install a compatible Gradle wrapper in the project). From the project root:
+**Messaging aliases:** To avoid conflicts with EssentialsX or vanilla commands, short aliases (`/msg`, `/reply`, `/ignore`, `/unignore`, `/ignorelist`, `/msgtoggle`) are **disabled by default**. Set `private-messages.register-short-aliases: true` before startup only if your server does not use another messaging plugin. The full `/incuid...` commands always work when messaging is enabled. Aliases and command enable/disable are determined at startup and require a restart; formatting settings support `/ic reload`.
 
-```sh
-gradle clean test build
-```
+**Current limitations:** Ignore/unignore can target online players only; their UUIDs persist after they go offline. Ignore list shows UUIDs for offline players. Reply partner is held in memory during the current online session; it's cleared when someone disconnects. Messaging does not federate across proxy servers. PlaceholderAPI is a soft dependency only and no expansion is registered. Phase 3 join/death/advancement messages and Phase 4 moderation are not included.
 
-Compiled JAR: `build/libs/INCUIDChat-1.0.0-phase1.jar`.
+## Install / upgrade
 
-Copy the JAR into `plugins/` on a **Paper 26.3** server running **Java 25**, restart, and configure `plugins/INCUIDChat/config.yml`. Use `/ic reload` for configuration changes.
+1. Back up `plugins/INCUIDChat/` and stop Paper.
+2. Build this project using GitHub Actions or `gradle clean test build` on Java 25 with Gradle 9.2.1.
+3. Download the **INCUIDChat-Phase2-JAR** artifact from the successful workflow and extract the `.jar`.
+4. Remove the old `INCUIDChat-1.0.0-phase1.jar` from your server's `plugins` folder. Upload **only** `INCUIDChat-1.1.2-phase2.jar`.
+5. Restart Paper and look for `INCUID Chat Phase 2 viewer-local health enabled` in console.
+6. Leave existing YAML files in place: plugin will reuse them. Add any new `interactive:` or `private-messages:` keys yourself to `config.yml` if you want to change their defaults. Missing keys are handled using defaults.
+7. Try `Hello [item]` while holding something, `Village at [coords]`, `/ic healthstyle heart`, `/incuidmsg Friend Hello`.
 
-## Commands
+## Permission nodes
 
-| Command | Description | Permission |
-|---|---|---|
-| `/incuidchat help` or `/ic help` | Command list | everyone |
-| `/ic status` | Enabled module status | everyone |
-| `/ic version` | Version info | everyone |
-| `/ic reload` | Reload config | `incuidchat.reload` or `incuidchat.admin` |
-| `/ic healthbar` | Toggle your health bar | `incuidchat.health.hide` |
-| `/ic healthstyle` | Show your chosen indicator style | `incuidchat.health.style` |
-| `/ic healthstyle bars` | Use the default ten-segment indicator | `incuidchat.health.style` |
-| `/ic healthstyle heart` | Use a single color-changing heart | `incuidchat.health.style` |
-| `/ic mentions` | Toggle sounds for your mentions | `incuidchat.mentions` |
+| Permission | Default | Purpose |
+| --- | --- | --- |
+| `incuidchat.admin` | op | Admin |
+| `incuidchat.reload` | op | Reload config |
+| `incuidchat.health` | true | Existing health functionality |
+| `incuidchat.health.hide` | true | Toggle health indicator |
+| `incuidchat.health.style` | true | Select bars/heart |
+| `incuidchat.mentions` | true | Mention notification preference |
+| `incuidchat.mentions.everyone` | op | `@everyone` |
+| `incuidchat.chat.color` | op | Reserved cosmetic permission |
+| `incuidchat.items` | true | Share `[item]` |
+| `incuidchat.coordinates` | true | Share `[coords]` |
+| `incuidchat.pm` | true | All personal messaging and ignore commands |
+| `incuidchat.pm.bypass` | op | Bypass user ignore and incoming-message toggle (staff only) |
 
-Permission defaults: `incuidchat.admin`, `incuidchat.reload`, `incuidchat.mentions.everyone`, `incuidchat.chat.color` => op; `incuidchat.health`, `incuidchat.health.hide`, `incuidchat.health.style`, `incuidchat.mentions` => everyone. `incuidchat.chat.color` is reserved and does not activate player formatting in Phase 1.
+## Runtime, safety and compatibility
 
-## Concurrency and signed chat
+- `AsyncChatEvent`: Bukkit entity data is captured once on the main thread (or inline for synchronous events). `ChatRenderer` receives immutable components; the signed original chat event content is **not rewritten**. Interactive tag decoration/mention highlights are a rendering transformation, not a cryptographic re-sign of modified text.
+- Held-item hover details and coordinate snapshots are captured on the main thread; no item references or `Player` references are retained in plugin state. Item metadata is size-limited before constructing hover events. Item snapshot is only generated if `[item]` appears in the message.
+- Ordinary chat processing does no disk writes. Player preference changes are saved via a single-thread executor; all outstanding writes are flushed on plugin shutdown (up to a bounded wait).
+- UUID-based reply state is ephemeral; persisted ignored UUIDs and player toggles are loaded once during enable.
+- Only one chat formatter should control final formatting. Disable EssentialsXChat/VentureChat formatting if you want INCUID Chat to own the output.
+- `players.yml` Phase 1.1 health-style values under `health-styles` are automatically read for migration. A preference change writes the new `players:` format and removes legacy storage; back up the file before upgrading.
 
-The async event captures a minimal immutable record via a main-thread scheduled callable. The waiting chat worker times out after two seconds and, if capture fails, leaves the original chat renderer untouched. No Bukkit player health, attributes, coordinates, online-list or LuckPerms player metadata are queried from the async chat worker. The renderer uses only snapshots. Mentions are sounded on the primary thread. No database or disk access is performed during normal chat.
+## Build and tests
 
-The original `event.message()` and signed user-authored content are **not replaced**. Highlighting mentions changes only the rendered decoration, but the simple mention highlighter can flatten nested text-component styling when a mention is present. This is a compatibility limitation to improve before production release. In particular, messages transformed for appearance should not be described as new, cryptographically signed text. Other chat formatters may override this renderer depending on event priority. Avoid installing multiple competing chat formatters.
+`gradle --no-daemon clean test build` on Java 25. The `.jar` appears in `build/libs/`. GitHub Actions uploads the output under **INCUIDChat-Phase2-JAR** after passing tests. The job also uploads test XML and reports on failure.
 
-## Configuration reference
+The code has been statically inspected, but **no Gradle/Java 25 environment is available in this workspace**. Final compilation, test execution and server integration must be verified by the GitHub workflow and Paper console before declaring this build production-ready.
 
-- `health.enabled`: global toggle
-- `health.segments`: must be 10; other values are ignored with a warning
-- `health.filled-symbol`, `health.empty-symbol`, `health.hearts`: display glyphs; 10 positions
-- `health.thresholds.healthy/injured`: unrounded percentage boundaries (75/50 defaults)
-- `health.colors.*`: strict `#RRGGBB`; invalid values get defaults
-- `health.hover.enabled`: health details tooltip
-- `health.visibility.allow-player-toggle/default-visible`: health display preferences (session only)
-- `chat.enabled`: enable renderer
-- `chat.separator`, `chat.player-color`, `chat.message-color`: cosmetic formatting
-- `chat.name-hover`, `chat.name-click-suggest-msg`: player name interactions
-- `mentions.enabled`, `mentions.highlight-color`, `mentions.sound`: player mentions
-- `mentions.cooldown-seconds`, `mentions.everyone-cooldown-seconds`: notification limits
-- `mentions.everyone-enabled`: enable staff mentions of everyone
-- `integrations.luckperms-prefix/suffix`: add metadata (admin-defined values escaped)
+## Known constraints
 
-## Troubleshooting
+Short command alias registration occurs on plugin startup. Some servers already register `/msg` or `/reply`, so do not enable aliases indiscriminately. Operators receive `incuidchat.pm.bypass` by default; revoke it if staff should not bypass user messaging preferences. Avoid putting sensitive coordinates in public chat; the `[coords]` feature shares your real world location in-game to everyone who sees the message.
 
-- **Unsupported API version**: server is not Paper 26.3 or newer.
-- **Unsupported class file**: start Paper using Java 25.
-- **Gradle dependency resolution fails**: check access to Paper's Maven repository and Maven Central. The dependency is pinned to `26.3.build.252-stable` and may require adjustment if it is unavailable.
-- **No ranks**: install/configure LuckPerms and verify prefix/suffix metadata; no LuckPerms is required for normal formatting.
-- **No mention sounds**: verify sound enum name, `mentions.enabled`, player preferences and cooldowns.
-- **Another plugin replaces chat**: remove competing chat formatters or manage event ordering carefully.
-- **Chat prints normally**: snapshot may have timed out; check console warnings and main-thread load.
+## Test for viewer-local health
 
-## Health fallback policy
-
-Non-finite input, zero or negative max-health => zero filled positions, dead/gray. Current HP is clamped to [0,max]. Ceil(percentage*10/100) fills at least one bar for positive health. Colors use actual unrounded percentages.
-
-## Build on GitHub Actions (no local Java or Gradle needed)
-
-1. Create an empty repository at https://github.com/new (suggested name: `INCUIDChat`, default branch `main`).
-2. Unzip `INCUIDChat-GitHub-ready.zip`. Upload **the contents of the extracted `INCUIDChat` folder**, including the hidden `.github` directory, to the **repository root**. The root should contain `build.gradle.kts`, `settings.gradle.kts`, `src/` and `.github/workflows/build.yml`.
-3. Commit the files to the `main` branch. The **Build INCUID Chat** workflow starts automatically. You can also go to **Actions → Build INCUID Chat → Run workflow**.
-4. Open the workflow run. If all tests/build steps pass, download the `INCUIDChat-Phase1-JAR` artifact. Unzip the artifact to get the JAR from `build/libs/`.
-
-The workflow does **not** publish a GitHub Release or deploy to a server. If the build fails, open the red step in Actions and inspect its log. This Phase 1 source has not yet been build-verified; a workflow file cannot guarantee compilation succeeds.
+Use two logged-in players. Player A: `/ic healthstyle heart`; Player B: `/ic healthstyle bars`. Have Player B send a chat message. A should see a heart before B's name, while B sees the ten-segment bar. Next A runs `/ic healthbar` and B sends another message: A sees no health icon, B continues seeing bars. Restart Paper and repeat to verify persistence. The two choices are viewing preferences; they do not alter health values, hover contents, sender messages, or others' settings.

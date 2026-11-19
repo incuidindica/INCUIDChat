@@ -16,10 +16,10 @@ public final class IncuidCommand implements BasicCommand {
         CommandSender sender=stack.getSender();
         String sub=args.length==0 ? "help" : args[0].toLowerCase(java.util.Locale.ROOT);
         switch (sub) {
-            case "help" -> sender.sendMessage(Component.text("INCUID Chat: /ic help, status, version, reload, healthbar, healthstyle [bars|heart], mentions"));
-            case "status" -> sender.sendMessage(Component.text("INCUID Chat Phase 1 | Health: " + plugin.settings().healthEnabled()
+            case "help" -> sender.sendMessage(Component.text("INCUID Chat: /ic help, status, version, reload, healthbar, healthstyle [bars|heart], mentions; /incuidmsg, /incuidreply, /incuidignore, /incuidunignore, /incuidignorelist, /incuidmsgtoggle"));
+            case "status" -> sender.sendMessage(Component.text("INCUID Chat Phase 2 | Health: " + plugin.settings().healthEnabled()
                     + " | Chat: " + plugin.settings().chatEnabled() + " | Mentions: " + plugin.settings().mentionEnabled()));
-            case "version" -> sender.sendMessage(Component.text("INCUID Chat 1.0.0-phase1 for Paper 26.3"));
+            case "version" -> sender.sendMessage(Component.text("INCUID Chat 1.1.1-phase2-viewer-health for Paper 26.3"));
             case "reload" -> {
                 if (!sender.hasPermission("incuidchat.reload") && !sender.hasPermission("incuidchat.admin")) { deny(sender); return; }
                 plugin.reloadSettings(); sender.sendMessage(Component.text("INCUID Chat configuration reloaded."));
@@ -28,13 +28,13 @@ public final class IncuidCommand implements BasicCommand {
                 if (!(sender instanceof Player player)) { sender.sendMessage(Component.text("Players only.")); return; }
                 if (!player.hasPermission("incuidchat.health.hide") || !plugin.settings().allowHealthToggle()) { deny(sender); return; }
                 boolean visible=plugin.toggleHealth(player.getUniqueId());
-                sender.sendMessage(Component.text("Your health bar is now " + (visible?"visible":"hidden") + "."));
+                sender.sendMessage(Component.text("Health indicators in your chat are now " + (visible?"visible":"hidden") + "."));
             }
             case "healthstyle" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage(Component.text("Players only.")); return; }
                 if (!player.hasPermission("incuidchat.health.style")) { deny(sender); return; }
                 if (args.length == 1) {
-                    sender.sendMessage(Component.text("Your health display: " + plugin.healthStyle(player.getUniqueId()).settingValue()
+                    sender.sendMessage(Component.text("Health display in your chat: " + plugin.healthStyle(player.getUniqueId()).settingValue()
                             + ". Choose /ic healthstyle bars or /ic healthstyle heart."));
                     return;
                 }
@@ -43,8 +43,8 @@ public final class IncuidCommand implements BasicCommand {
                 }
                 HealthStyle selected = HealthStyle.parse(args[1]);
                 boolean saved = plugin.setHealthStyle(player.getUniqueId(), selected);
-                sender.sendMessage(Component.text("Your health indicator is now " + selected.settingValue()
-                        + ". " + (saved ? "Preference saved." : "Warning: preference could not be saved to disk.")));
+                sender.sendMessage(Component.text("Health indicators in your chat now use " + selected.settingValue()
+                        + ". " + (saved ? "Only your view changes; preference queued for saving." : "Warning: preference change was not accepted.")));
             }
             case "mentions" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage(Component.text("Players only.")); return; }

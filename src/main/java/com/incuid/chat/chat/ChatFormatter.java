@@ -2,6 +2,8 @@ package com.incuid.chat.chat;
 
 import com.incuid.chat.config.ChatSettings;
 import com.incuid.chat.health.HealthBar;
+import com.incuid.chat.health.HealthDisplayPreference;
+import com.incuid.chat.storage.PlayerPreferences;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.event.ClickEvent;
 import net.kyori.adventure.text.event.HoverEvent;
@@ -13,9 +15,15 @@ import net.kyori.adventure.text.minimessage.tag.resolver.TagResolver;
 public final class ChatFormatter {
     private static final MiniMessage MM = MiniMessage.miniMessage();
     private ChatFormatter() { }
-    public static Component format(PlayerSnapshot p, Component message, ChatSettings s) {
+    public static Component format(PlayerSnapshot p, Component message, ChatSettings s,
+                                   PlayerPreferences.State viewerSettings) {
         Component result = Component.empty();
-        if (s.healthEnabled() && !p.hiddenHealth()) result = result.append(HealthBar.render(p.username(), p.health(), s, p.style())).append(Component.space());
+        var display = HealthDisplayPreference.resolve(viewerSettings.style(), viewerSettings.hideHealth(),
+                s.allowHealthToggle(), s.healthDefaultVisible());
+        if (s.healthEnabled() && display.visible()) {
+            result = result.append(HealthBar.render(p.username(), p.health(), s, display.style()))
+                    .append(Component.space());
+        }
         if (s.luckPrefix()) result = result.append(safeMeta(p.prefix()));
         Component name = Component.text(p.username(), TextColor.fromHexString(s.playerColor()));
         if (s.nameHover()) name = name.hoverEvent(HoverEvent.showText(Component.text("Player: " + p.username())));
