@@ -16,6 +16,10 @@ public final class ChannelRules {
         double dx=x-sx, dy=y-sy, dz=z-sz;
         return dx*dx+dy*dy+dz*dz <= radius*radius;
     }
+    /** Operators can always access staff chat. Non-operators need an explicitly granted permission. */
+    public static boolean staffAllowed(boolean operator, boolean explicitPermission) {
+        return operator || explicitPermission;
+    }
     public static String normalize(String candidate, boolean localEnabled, boolean staffEnabled, boolean staffPermission) {
         if ("local".equalsIgnoreCase(candidate) && localEnabled) return "local";
         if ("staff".equalsIgnoreCase(candidate) && staffEnabled && staffPermission) return "staff";
