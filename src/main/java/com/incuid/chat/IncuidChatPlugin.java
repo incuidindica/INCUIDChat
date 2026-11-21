@@ -1,6 +1,8 @@
 package com.incuid.chat;
 
 import com.incuid.chat.chat.ChatFormatter;
+import com.incuid.chat.channels.ChannelService;
+import com.incuid.chat.config.ConfigMigrator;
 import com.incuid.chat.community.AfkService;
 import com.incuid.chat.community.CommunityAnnouncements;
 import com.incuid.chat.chat.PlayerSnapshot;
@@ -22,6 +24,8 @@ import org.bukkit.Sound;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
+import net.kyori.adventure.audience.Audience;
+import net.kyori.adventure.text.Component;
 import org.bukkit.event.Listener;
 import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -36,12 +40,19 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     private MessageService messages;
     private AfkService afk;
     private ModerationService moderation;
+    private ChannelService channels;
+    private record PendingChannel(String channel,String text) { }
+    private final ConcurrentMap<UUID,PendingChannel> nextChannelMessage=new ConcurrentHashMap<>();
+    private final ConcurrentMap<AsyncChatEvent,PendingDelivery> pendingDelivery=new ConcurrentHashMap<>();
+    private record PendingDelivery(UUID sender,Set<UUID> mentions,boolean everyone,ChatSettings settings,
+                                   String channel,int initialRecipients,int afterIncuid) { }
     private ModerationCommands moderationCommands;
     private final ConcurrentMap<UUID,Long> mentionCooldown = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID,Long> everyoneCooldown = new ConcurrentHashMap<>();
 
     @Override public void onEnable() {
         saveDefaultConfig();
+        ConfigMigrator.migrate(this);
         // Migrate the legacy stock near-white text; do not change any other custom color.
         if ("#EEEEEE".equalsIgnoreCase(getConfig().getString("chat.message-color",""))) {
             getConfig().set("chat.message-color","#B8C5D1");
@@ -62,6 +73,7 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         }
         reloadSettings();
         preferences = new PlayerPreferences(this);
+        channels = new ChannelService(this);
         afk = new AfkService(this);
         moderation = new ModerationService(this);
         moderationCommands = new ModerationCommands(this,moderation);
@@ -75,8 +87,17 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
             });
         }
         Bukkit.getPluginManager().registerEvents(afk,this);
+        afk.start();
         Bukkit.getPluginManager().registerEvents(new CommunityAnnouncements(this),this);
         registerCommand("afk","Toggle away-from-keyboard status",List.of(),afk);
+        if (channels.settings().enabled()) {
+            registerCommand("chat","Select INCUID chat channel",List.of(),channels.command("chat"));
+            if (getConfig().getBoolean("channels.register-shortcuts",true)) {
+                registerCommand("g","Send one global message",List.of(),channels.command("g"));
+                registerCommand("l","Send one local message",List.of(),channels.command("l"));
+                registerCommand("sc","Send one staff message",List.of(),channels.command("sc"));
+            }
+        }
         Bukkit.getPluginManager().registerEvents(this,this);
         registerCommand("incuidchat", "INCUID Chat management", List.of("ic"), new IncuidCommand(this));
         if (getConfig().getBoolean("private-messages.enabled", true)) {
@@ -87,12 +108,14 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
             registerCommand("incuidignorelist","List ignored players",shortAliases("ignorelist"),messages.command("ignorelist"));
             registerCommand("incuidmsgtoggle","Toggle messages",shortAliases("msgtoggle"),messages.command("msgtoggle"));
         }
-        getLogger().info("INCUID Chat Phase 4 enabled (moderation, community, interactive chat)");
+        getLogger().info("INCUID Chat Phase 5 enabled (moderation, community, interactive chat)");
     }
     public void reloadSettings() {
         reloadConfig();
         settings = ChatSettings.load(getConfig());
         if (moderation != null) moderation.reload();
+        if (channels != null) channels.reload();
+        if (afk != null) afk.start();
         if (afk != null && !getConfig().getBoolean("afk.enabled",true)) afk.shutdown();
         interactiveConfig = new InteractiveConfig(
                 getConfig().getBoolean("interactive.items.enabled",true),
@@ -119,6 +142,20 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     public boolean toggleMentions(UUID id) { return preferences.toggleMentions(id); }
     public PlayerPreferences preferences() { return preferences; }
     public ModerationService moderation() { return moderation; }
+    /** Invokes the normal Bukkit/Paper chat pipeline, including mutes and other plugins.
+     * The command-generated message is NOT a client-signed chat message. */
+    public void sendChannelCommand(Player player,String channel,String message) {
+        if (message.isBlank() || message.length()>512 || message.startsWith("/")) { player.sendMessage("Invalid channel message.");return; }
+        PendingChannel pending = new PendingChannel(channel,message);
+        if (nextChannelMessage.putIfAbsent(player.getUniqueId(),pending)!=null) {
+            player.sendMessage("Previous channel message is still being processed.");return;
+        }
+        // The chat event may run asynchronously after player.chat() returns. Retain a short-lived
+        // exact-message override and discard it if no matching event arrives.
+        Bukkit.getScheduler().runTaskLater(this,() -> nextChannelMessage.remove(player.getUniqueId(),pending),40L);
+        try { player.chat(message); }
+        catch (RuntimeException ex) { nextChannelMessage.remove(player.getUniqueId(),pending);throw ex; }
+    }
     public ModerationCommands moderationCommands() { return moderationCommands; }
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
@@ -128,7 +165,14 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         if (Bukkit.isPrimaryThread()) afk.onChat(event.getPlayer());
         else Bukkit.getScheduler().runTask(this, () -> afk.onChat(event.getPlayer()));
         final UUID sourceId = event.getPlayer().getUniqueId();
-        String plainMessage = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message()).toLowerCase(java.util.Locale.ROOT);
+        String originalText=net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(event.message());
+        PendingChannel pending=nextChannelMessage.get(sourceId);
+        String forced=null;
+        if (pending!=null && pending.text().equals(originalText) && nextChannelMessage.remove(sourceId,pending)) {
+            forced=pending.channel();
+        }
+        final String requestedChannel=forced;
+        String plainMessage = originalText.toLowerCase(java.util.Locale.ROOT);
         boolean wantsItem = plainMessage.contains("[item]");
         boolean wantsCoords = plainMessage.contains("[coords]");
         // Bukkit entity state is captured on the server thread. For async chat, wait on the chat worker only.
@@ -136,9 +180,9 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         final Capture capture;
         try {
             if (!event.isAsynchronous() || Bukkit.isPrimaryThread()) {
-                capture = capture(event.getPlayer(),cfg,wantsItem,wantsCoords);
+                capture = capture(event.getPlayer(),cfg,wantsItem,wantsCoords,requestedChannel);
             } else {
-                capture = Bukkit.getScheduler().callSyncMethod(this, () -> capture(event.getPlayer(),cfg,wantsItem,wantsCoords))
+                capture = Bukkit.getScheduler().callSyncMethod(this, () -> capture(event.getPlayer(),cfg,wantsItem,wantsCoords,requestedChannel))
                         .get(2, TimeUnit.SECONDS);
             }
         } catch (InterruptedException ex) {
@@ -149,6 +193,13 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
             getLogger().warning("Unable to capture chat safely; leaving original renderer unchanged: " + ex.getMessage());
             return;
         }
+        // Channel routing intersects the existing event audience. Never expand recipients removed
+        // by another plugin or Paper; this also preserves vanish and privacy restrictions.
+        int before=event.viewers().size();
+        if (!"global".equals(capture.channel().channel())) {
+            event.viewers().removeIf(viewer -> !capture.channel().accepts(viewer));
+        }
+        int after=event.viewers().size();
         var output = ChatPipeline.render(event.message(),capture.tags(),capture.online(),capture.everyoneAllowed(),cfg,
                 interactiveConfig.maxItems(),interactiveConfig.maxCoords());
         // Set only renderer, not event.message(): signed content is preserved.
@@ -157,27 +208,47 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         event.renderer((source, sourceName, msg, viewer) -> {
             PlayerPreferences.State viewerSettings = viewer instanceof Player recipient
                     ? preferences.get(recipient.getUniqueId()) : PlayerPreferences.State.defaults();
-            return ChatFormatter.format(capture.player(), output.component(), cfg, viewerSettings);
+            return ChatFormatter.format(capture.player(), output.component(), cfg, viewerSettings,
+                    channels.label(capture.channel().channel()),capture.afk());
         });
-        if (cfg.mentionEnabled() && (!output.mentioned().isEmpty() || output.everyone())) {
-            Runnable notify = () -> {
-                if (!Bukkit.getPluginManager().isPluginEnabled(this)) return;
-                long now = System.currentTimeMillis();
-                Set<UUID> ids = new HashSet<>(output.mentioned());
-                if (output.everyone() && cfg.everyoneEnabled() && allow(everyoneCooldown,sourceId,now,cfg.everyoneCooldown())) {
-                    for (Player online : Bukkit.getOnlinePlayers()) ids.add(online.getUniqueId());
-                }
-                for (UUID id : ids) {
-                    if (id.equals(sourceId) || preferences.get(id).silentMentions() || !allow(mentionCooldown,id,now,cfg.mentionCooldown())) continue;
-                    Player target = Bukkit.getPlayer(id);
-                    if (target != null && target.isOnline()) {
-                        try { target.playSound(target.getLocation(),Sound.valueOf(cfg.mentionSound()),cfg.mentionVolume(),cfg.mentionPitch()); }
-                        catch (IllegalArgumentException ex) { getLogger().warning("Invalid mentions.sound in config.yml: " + cfg.mentionSound()); }
-                    }
-                }
-            };
-            if (Bukkit.isPrimaryThread()) notify.run(); else Bukkit.getScheduler().runTask(this,notify);
+        if (channels.settings().diagnostics() || (cfg.mentionEnabled() && (!output.mentioned().isEmpty() || output.everyone()))) {
+            pendingDelivery.put(event,new PendingDelivery(sourceId,output.mentioned(),output.everyone(),cfg,
+                    capture.channel().channel(),before,after));
         }
+    }
+
+    /** Inspect the final audience after normal channel routing and moderation have executed.
+     * The event is removed from the temporary map even if a later plugin cancelled it. */
+    @EventHandler(priority=EventPriority.MONITOR)
+    public void onChatFinished(AsyncChatEvent event) {
+        PendingDelivery pending=pendingDelivery.remove(event);
+        if (pending==null) return;
+        if (channels.settings().diagnostics()) {
+            getLogger().info("Chat recipient diagnostics channel="+pending.channel()
+                    +" initially="+pending.initialRecipients()+" after-incuid="+pending.afterIncuid()
+                    +" at-monitor="+event.viewers().size()+" cancelled="+event.isCancelled());
+        }
+        if (event.isCancelled()) return;
+        Set<UUID> allowed=new HashSet<>();
+        for (Audience viewer:event.viewers()) if (viewer instanceof Player p) allowed.add(p.getUniqueId());
+        Runnable notify=() -> {
+            if (!Bukkit.getPluginManager().isPluginEnabled(this)) return;
+            long now=System.currentTimeMillis();
+            Set<UUID> targets=new HashSet<>(pending.mentions());
+            ChatSettings cfg=pending.settings();
+            if (pending.everyone() && cfg.everyoneEnabled()
+                    && allow(everyoneCooldown,pending.sender(),now,cfg.everyoneCooldown())) targets.addAll(allowed);
+            targets.retainAll(allowed);
+            for(UUID id:targets) {
+                if (id.equals(pending.sender()) || preferences.get(id).silentMentions()
+                        || !allow(mentionCooldown,id,now,cfg.mentionCooldown())) continue;
+                Player p=Bukkit.getPlayer(id);
+                if(p==null || !p.isOnline()) continue;
+                try { p.playSound(p.getLocation(),Sound.valueOf(cfg.mentionSound()),cfg.mentionVolume(),cfg.mentionPitch()); }
+                catch (IllegalArgumentException ex) { getLogger().warning("Invalid mention sound: " + cfg.mentionSound()); }
+            }
+        };
+        if(Bukkit.isPrimaryThread()) notify.run(); else Bukkit.getScheduler().runTask(this,notify);
     }
     private boolean allow(ConcurrentMap<UUID,Long> history,UUID id,long now,int seconds) {
         final long interval = seconds * 1000L;
@@ -188,25 +259,27 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         });
         return allowed[0];
     }
-    private Capture capture(Player player,ChatSettings cfg, boolean wantsItem,boolean wantsCoords) {
+    private Capture capture(Player player,ChatSettings cfg, boolean wantsItem,boolean wantsCoords,String forced) {
         PlayerSnapshot snapshot = PlayerSnapshot.capture(player,cfg.healthyAt(),cfg.injuredAt());
         List<MentionService.Target> online = new ArrayList<>();
         for (Player p : Bukkit.getOnlinePlayers()) online.add(new MentionService.Target(p.getUniqueId(),p.getName()));
         InteractiveConfig options = interactiveConfig;
         InteractiveTags.Snapshot tags=InteractiveTags.capture(player,options.items() && wantsItem,options.coords() && wantsCoords,options.maxBytes());
-        return new Capture(snapshot,List.copyOf(online),player.hasPermission("incuidchat.mentions.everyone"),tags);
+        return new Capture(snapshot,List.copyOf(online),player.hasPermission("incuidchat.mentions.everyone"),tags,
+                channels.capture(player,forced),afk.isAfk(player.getUniqueId()));
     }
     private record Capture(PlayerSnapshot player,List<MentionService.Target> online,boolean everyoneAllowed,
-                           InteractiveTags.Snapshot tags) { }
+                           InteractiveTags.Snapshot tags,ChannelService.Snapshot channel,boolean afk) { }
     @EventHandler public void onQuit(PlayerQuitEvent event) {
         UUID id=event.getPlayer().getUniqueId();
         mentionCooldown.remove(id);
         everyoneCooldown.remove(id);
         messages.quit(id);
+        nextChannelMessage.remove(id);
         if (moderation!=null) moderation.forget(id);
     }
     @Override public void onDisable() {
-        mentionCooldown.clear(); everyoneCooldown.clear();
+        mentionCooldown.clear(); everyoneCooldown.clear(); nextChannelMessage.clear();pendingDelivery.clear();
         if (afk != null) afk.shutdown();
         if (messages != null) messages.close();
         if (preferences != null) preferences.close();

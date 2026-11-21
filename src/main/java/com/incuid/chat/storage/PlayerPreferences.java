@@ -13,11 +13,15 @@ import java.util.logging.Level;
 /** Thread-safe UUID-only preferences. File operations run only on a dedicated background writer. */
 public final class PlayerPreferences {
     public record State(HealthStyle style, boolean hideHealth, boolean silentMentions,
-                        boolean messagesDisabled, Set<UUID> ignored) {
+                        boolean messagesDisabled, Set<UUID> ignored, String channel) {
         public State {
             ignored = Set.copyOf(ignored);
+            channel = switch (channel == null ? "global" : channel.toLowerCase(java.util.Locale.ROOT)) {
+                case "local", "staff" -> channel.toLowerCase(java.util.Locale.ROOT);
+                default -> "global";
+            };
         }
-        public static State defaults() { return new State(HealthStyle.BARS,false,false,false,Set.of()); }
+        public static State defaults() { return new State(HealthStyle.BARS,false,false,false,Set.of(),"global"); }
     }
     private final ConcurrentMap<UUID, State> states = new ConcurrentHashMap<>();
     private final ExecutorService writer = Executors.newSingleThreadExecutor(r -> {
@@ -40,18 +44,18 @@ public final class PlayerPreferences {
         persist();
     }
     public void style(UUID id, HealthStyle style) {
-        modify(id, s -> new State(style,s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored()));
+        modify(id, s -> new State(style,s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored(),s.channel()));
     }
     public boolean toggleHealth(UUID id) {
-        modify(id,s->new State(s.style(),!s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored()));
+        modify(id,s->new State(s.style(),!s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored(),s.channel()));
         return !get(id).hideHealth();
     }
     public boolean toggleMentions(UUID id) {
-        modify(id,s->new State(s.style(),s.hideHealth(),!s.silentMentions(),s.messagesDisabled(),s.ignored()));
+        modify(id,s->new State(s.style(),s.hideHealth(),!s.silentMentions(),s.messagesDisabled(),s.ignored(),s.channel()));
         return !get(id).silentMentions();
     }
     public boolean toggleMessages(UUID id) {
-        modify(id,s->new State(s.style(),s.hideHealth(),s.silentMentions(),!s.messagesDisabled(),s.ignored()));
+        modify(id,s->new State(s.style(),s.hideHealth(),s.silentMentions(),!s.messagesDisabled(),s.ignored(),s.channel()));
         return !get(id).messagesDisabled();
     }
     public boolean ignore(UUID id, UUID target, boolean add) {
@@ -60,9 +64,12 @@ public final class PlayerPreferences {
         modify(id,s->{
             Set<UUID> values = new HashSet<>(s.ignored());
             if (add) values.add(target); else values.remove(target);
-            return new State(s.style(),s.hideHealth(),s.silentMentions(),s.messagesDisabled(),values);
+            return new State(s.style(),s.hideHealth(),s.silentMentions(),s.messagesDisabled(),values,s.channel());
         });
         return true;
+    }
+    public void channel(UUID id,String channel) {
+        modify(id,s->new State(s.style(),s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored(),channel));
     }
     private void load() {
         if (!file.isFile()) return;
@@ -81,7 +88,7 @@ public final class PlayerPreferences {
                 HealthStyle style = HealthStyle.parse(c.getString("style", "bars"));
                 if (style == null) style = HealthStyle.BARS;
                 states.put(id,new State(style,c.getBoolean("hide-health"),c.getBoolean("silent-mentions"),
-                        c.getBoolean("disable-messages"),ignored));
+                        c.getBoolean("disable-messages"),ignored,c.getString("channel","global")));
             } catch (IllegalArgumentException ex) { plugin.getLogger().warning("Skipping invalid player UUID: " + key); }
         }
         // Migrates Phase 1.1 health-styles without overwriting player options.
@@ -92,7 +99,7 @@ public final class PlayerPreferences {
                 HealthStyle style = HealthStyle.parse(legacy.getString(key));
                 if (style == HealthStyle.HEART && !states.containsKey(id)) states.compute(id,(k,old)-> {
                     State s = old == null ? State.defaults() : old;
-                    return new State(style,s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored());
+                    return new State(style,s.hideHealth(),s.silentMentions(),s.messagesDisabled(),s.ignored(),s.channel());
                 });
             } catch (IllegalArgumentException ex) { plugin.getLogger().warning("Skipping invalid legacy player UUID: " + key); }
         }
@@ -110,6 +117,7 @@ public final class PlayerPreferences {
                 yaml.set(key+"hide-health", s.hideHealth());
                 yaml.set(key+"silent-mentions",s.silentMentions());
                 yaml.set(key+"disable-messages",s.messagesDisabled());
+                yaml.set(key+"channel",s.channel());
                 yaml.set(key+"ignored",s.ignored().stream().map(UUID::toString).sorted().toList());
             }
             try { yaml.save(file); }

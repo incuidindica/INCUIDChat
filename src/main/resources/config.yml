@@ -90,6 +90,10 @@ afk:
   enabled: true
   clear-on-chat: true
   broadcast: false
+  auto:
+    enabled: false
+    idle-seconds: 300
+    clear-on-activity: true
 
 # Phase 4 — configurable, lightweight moderation. All options can be reloaded.
 # Mutes persist to mutes.yml; moderation actions are appended to moderation.log.
@@ -119,3 +123,20 @@ moderation:
     enabled: true
   clear:
     enabled: true
+
+# Phase 5: default disabled for backwards-compatible public chat.
+channels:
+  enabled: false
+  register-shortcuts: true # Registered at server startup; restart after changing this.
+  show-labels: true
+  local:
+    enabled: false
+    radius: 100
+  staff:
+    enabled: false
+# Diagnostic count-only logging: never logs chat text or player UUIDs.
+diagnostics:
+  recipients:
+    enabled: false
+# Optional idle AFK detection (manual /afk works regardless).
+
