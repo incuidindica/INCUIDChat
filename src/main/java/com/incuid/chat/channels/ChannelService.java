@@ -23,20 +23,20 @@ public final class ChannelService {
     public ChannelService(IncuidChatPlugin plugin) { this.plugin=plugin; reload(); }
     public void reload() {
         FileConfiguration c=plugin.getConfig();
-        settings=new Settings(c.getBoolean("channels.enabled",false),c.getBoolean("channels.local.enabled",false),
-            c.getBoolean("channels.staff.enabled",false),Math.max(1,Math.min(1000,c.getDouble("channels.local.radius",100))),
+        settings=new Settings(c.getBoolean("channels.enabled",false),c.getBoolean("channels.local.enabled",true),
+            c.getBoolean("channels.staff.enabled",true),Math.max(1,Math.min(1000,c.getDouble("channels.local.radius",100))),
             c.getBoolean("channels.show-labels",true),c.getBoolean("diagnostics.recipients.enabled",false));
     }
     public Settings settings() { return settings; }
-    private boolean staff(Player p) { return p.hasPermission("incuidchat.staffchat"); }
+    private boolean staff(Player p) { return ChannelRules.staffAllowed(p.isOp(),p.hasPermission("incuidchat.staffchat")); }
     public String channel(Player sender) {
         Settings s=settings;
         if (!s.enabled()) return "global";
-        return ChannelRules.normalize(plugin.preferences().get(sender.getUniqueId()).channel(),s.local() && sender.hasPermission("incuidchat.channels.local"),s.staff(),staff(sender));
+        return ChannelRules.normalize(plugin.preferences().get(sender.getUniqueId()).channel(),s.local(),s.staff(),staff(sender));
     }
     public Snapshot capture(Player sender,String override) {
         Settings s=settings;
-        String choice=s.enabled()?ChannelRules.normalize(override==null?channel(sender):override,s.local() && sender.hasPermission("incuidchat.channels.local"),s.staff(),staff(sender)):"global";
+        String choice=s.enabled()?ChannelRules.normalize(override==null?channel(sender):override,s.local(),s.staff(),staff(sender)):"global";
         Set<UUID> eligible=new HashSet<>();
         var source=sender.getLocation();
         for (Player player : Bukkit.getOnlinePlayers()) {
@@ -65,13 +65,13 @@ public final class ChannelService {
                 if (!settings.enabled()) { p.sendMessage("Chat channels are disabled."); return; }
                 if (variant.equals("chat")) {
                     if (args.length==0) { p.sendMessage("Current channel: " + channel(p) + ". Use /chat <global|local|staff>.");return; }
-                    String selected=ChannelRules.normalize(args[0],settings.local() && p.hasPermission("incuidchat.channels.local"),settings.staff(),staff(p));
-                    if (!args[0].equalsIgnoreCase(selected)) { p.sendMessage("That channel is unavailable or you lack permission.");return; }
+                    String selected=ChannelRules.normalize(args[0],settings.local(),settings.staff(),staff(p));
+                    if (!args[0].equalsIgnoreCase(selected)) { p.sendMessage("That channel is disabled or you lack staff access. Ask an admin to enable local/staff in config.yml.");return; }
                     plugin.preferences().channel(p.getUniqueId(),selected);
                     p.sendMessage("Your active chat channel is now " + selected + ".");
                 } else {
                     String requested=switch(variant) { case "g" -> "global"; case "l" -> "local"; default -> "staff"; };
-                    if (!requested.equals(ChannelRules.normalize(requested,settings.local() && p.hasPermission("incuidchat.channels.local"),settings.staff(),staff(p)))) {
+                    if (!requested.equals(ChannelRules.normalize(requested,settings.local(),settings.staff(),staff(p)))) {
                         p.sendMessage("That channel is unavailable or you lack permission.");return;
                     }
                     if (args.length==0) { p.sendMessage("Usage: /"+variant+" <message>");return; }
@@ -82,8 +82,8 @@ public final class ChannelService {
             @Override public Collection<String> suggest(CommandSourceStack stack,String[] args) {
                 if (!variant.equals("chat") || args.length!=1) return List.of();
                 List<String> list=new ArrayList<>();list.add("global");
-                if (settings.local() && stack.getSender().hasPermission("incuidchat.channels.local")) list.add("local");
-                if (settings.staff() && stack.getSender().hasPermission("incuidchat.staffchat")) list.add("staff");
+                if (settings.local()) list.add("local");
+                if (settings.staff() && (stack.getSender() instanceof Player p) && staff(p)) list.add("staff");
                 return list.stream().filter(n->n.startsWith(args[0].toLowerCase(Locale.ROOT))).toList();
             }
         };
