@@ -27,6 +27,16 @@ final class ChannelRulesTest {
         assertFalse(ChannelRules.inRange("overworld",0,64,0,"overworld",101,64,0,100));
         assertFalse(ChannelRules.inRange("overworld",0,64,0,"overworld",0,64,0,-5));
     }
+    @Test void operatorsCanAccessStaffWithoutAdditionalPermissions() {
+        assertTrue(ChannelRules.staffAllowed(true,false));
+        assertTrue(ChannelRules.staffAllowed(false,true));
+        assertFalse(ChannelRules.staffAllowed(false,false));
+        assertEquals("staff",ChannelRules.normalize("staff",true,true,ChannelRules.staffAllowed(true,false)));
+        assertEquals("global",ChannelRules.normalize("staff",true,true,ChannelRules.staffAllowed(false,false)));
+    }
+    @Test void localChatHasNoPermissionRequirement() {
+        assertEquals("local",ChannelRules.normalize("local",true,true,false));
+    }
     @Test void closedChannelsFallBackToGlobal() {
         assertEquals("global",ChannelRules.normalize("staff",true,true,false));
         assertEquals("global",ChannelRules.normalize("local",false,true,false));
