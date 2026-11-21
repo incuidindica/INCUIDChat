@@ -84,14 +84,16 @@ announcements:
     enabled: true
     prefix: '<gold>✦ </gold>'
 
-# AFK status is per player, cleared on reconnect or when chatting.
+# AFK status is per player. Both manual and automatic AFK clear on movement/activity by default.
 # [AFK] brackets are white (#FFFFFF); AFK letters are red (#FF5555).
 afk:
   enabled: true
   clear-on-chat: true
   broadcast: false
+  manual:
+    clear-on-activity: true
   auto:
-    enabled: false
+    enabled: true
     idle-seconds: 300
     clear-on-activity: true
 
