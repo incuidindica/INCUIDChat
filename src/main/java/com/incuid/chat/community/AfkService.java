@@ -28,7 +28,7 @@ public final class AfkService implements Listener, BasicCommand {
     public void start() {
         if (autoTask != null) autoTask.cancel();
         autoTask=Bukkit.getScheduler().runTaskTimer(plugin,() -> {
-            if (!enabled() || !plugin.getConfig().getBoolean("afk.auto.enabled",false)) return;
+            if (!enabled() || !plugin.getConfig().getBoolean("afk.auto.enabled",true)) return;
             long timeout=Math.max(60,plugin.getConfig().getLong("afk.auto.idle-seconds",300))*1000L;
             long now=System.currentTimeMillis();
             for (Player player:Bukkit.getOnlinePlayers()) {
@@ -38,15 +38,26 @@ public final class AfkService implements Listener, BasicCommand {
         },400L,400L);
     }
     private void active(Player p) {
-        lastActivity.put(p.getUniqueId(),System.currentTimeMillis());
-        if (plugin.getConfig().getBoolean("afk.auto.clear-on-activity",true) && autoMarked.contains(p.getUniqueId())) setAfk(p,false);
+        UUID id=p.getUniqueId();
+        lastActivity.put(id,System.currentTimeMillis());
+        if (isAfk(id) && AfkRules.shouldClearOnActivity(
+                autoMarked.contains(id),
+                plugin.getConfig().getBoolean("afk.auto.clear-on-activity",true),
+                plugin.getConfig().getBoolean("afk.manual.clear-on-activity",true))) {
+            setAfk(p,false);
+        }
     }
     @EventHandler public void onJoin(PlayerJoinEvent e) { lastActivity.put(e.getPlayer().getUniqueId(),System.currentTimeMillis()); }
     @EventHandler public void onMove(PlayerMoveEvent e) {
         if (e.getTo()!=null && (e.getFrom().getBlockX()!=e.getTo().getBlockX() || e.getFrom().getBlockY()!=e.getTo().getBlockY() || e.getFrom().getBlockZ()!=e.getTo().getBlockZ())) active(e.getPlayer());
     }
     @EventHandler public void onInteract(PlayerInteractEvent e) { active(e.getPlayer()); }
-    @EventHandler public void onCommand(PlayerCommandPreprocessEvent e) { active(e.getPlayer()); }
+    @EventHandler public void onCommand(PlayerCommandPreprocessEvent e) {
+        // /afk must toggle the current state, not clear it first and then toggle it back on.
+        String command=e.getMessage().trim().split("\\s+",2)[0].toLowerCase(Locale.ROOT);
+        if (command.equals("/afk") || command.equals("/incuidchat:afk")) return;
+        active(e.getPlayer());
+    }
     public AfkService(IncuidChatPlugin plugin) { this.plugin = plugin; }
     public boolean isAfk(UUID id) { return afk.contains(id); }
     public boolean enabled() { return plugin.getConfig().getBoolean("afk.enabled",true); }
