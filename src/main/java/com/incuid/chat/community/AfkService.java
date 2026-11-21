@@ -85,6 +85,7 @@ public final class AfkService implements Listener, BasicCommand {
     @Override public void execute(CommandSourceStack stack,String[] args) {
         if (!(stack.getSender() instanceof Player p)) { stack.getSender().sendMessage(Component.text("Players only."));return; }
         if (!enabled() || !p.hasPermission("incuidchat.afk")) { p.sendMessage(Component.text("AFK is unavailable."));return; }
+        lastActivity.put(p.getUniqueId(),System.currentTimeMillis());
         boolean value=setAfk(p,!isAfk(p.getUniqueId()));
         p.sendMessage(Component.text(value?"You are now AFK. Use /afk again to return.":"You are no longer AFK."));
         if (plugin.getConfig().getBoolean("afk.broadcast",false)) Bukkit.broadcast(Component.text(p.getName()+(value?" is now AFK.":" is back."),TextColor.color(0xAAAAAA)));
