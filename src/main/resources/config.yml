@@ -128,14 +128,14 @@ moderation:
 
 # Phase 5: default disabled for backwards-compatible public chat.
 channels:
-  enabled: false
+  enabled: false # Master switch: set true to register /chat, /g, /l and /sc
   register-shortcuts: true # Registered at server startup; restart after changing this.
   show-labels: true
   local:
-    enabled: false
+    enabled: true # Available to all players when channels.enabled is true
     radius: 100
   staff:
-    enabled: false
+    enabled: true # Operators and users granted incuidchat.staffchat only
 # Diagnostic count-only logging: never logs chat text or player UUIDs.
 diagnostics:
   recipients:
