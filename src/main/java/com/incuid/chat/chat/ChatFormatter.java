@@ -17,7 +17,11 @@ public final class ChatFormatter {
     private ChatFormatter() { }
     public static Component format(PlayerSnapshot p, Component message, ChatSettings s,
                                    PlayerPreferences.State viewerSettings) {
-        Component result = Component.empty();
+        return format(p,message,s,viewerSettings,Component.empty(),false);
+    }
+    public static Component format(PlayerSnapshot p, Component message, ChatSettings s,
+                                   PlayerPreferences.State viewerSettings,Component channelLabel,boolean afk) {
+        Component result = channelLabel;
         var display = HealthDisplayPreference.resolve(viewerSettings.style(), viewerSettings.hideHealth(),
                 s.allowHealthToggle(), s.healthDefaultVisible());
         if (s.healthEnabled() && display.visible()) {
@@ -26,7 +30,13 @@ public final class ChatFormatter {
         }
         if (s.luckPrefix()) result = result.append(safeMeta(p.prefix()));
         Component name = Component.text(p.username(), TextColor.fromHexString(s.playerColor()));
-        if (s.nameHover()) name = name.hoverEvent(HoverEvent.showText(Component.text("Player: " + p.username())));
+        if (s.nameHover()) {
+            Component details=Component.text("Player: " + p.username())
+                .append(Component.newline()).append(Component.text("Rank: " + (p.prefix().isBlank()?"Member":p.prefix())))
+                .append(Component.newline()).append(Component.text("Health: " + p.health().current() + " / " + p.health().maximum()))
+                .append(Component.newline()).append(Component.text("Status: " + (afk?"AFK":"Online")));
+            name = name.hoverEvent(HoverEvent.showText(details));
+        }
         if (s.clickNames()) name = name.clickEvent(ClickEvent.suggestCommand("/msg " + p.username() + " "));
         result = result.append(name);
         if (s.luckSuffix()) result = result.append(safeMeta(p.suffix()));

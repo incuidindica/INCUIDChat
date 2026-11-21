@@ -1,5 +1,5 @@
 name: INCUIDChat
-version: 1.3.0-phase4
+version: 1.4.0-phase5
 main: com.incuid.chat.IncuidChatPlugin
 api-version: '26.3'
 author: INCUID
@@ -42,3 +42,10 @@ permissions:
     default: op
   incuidchat.moderation.notify:
     default: op
+
+  incuidchat.staffchat:
+    default: op
+  incuidchat.channels.local:
+    default: true
+  incuidchat.channels.global:
+    default: true

@@ -1,4 +1,8 @@
-> **Current release: INCUID Chat 1.3.0 Phase 4** — see [Phase 4 administrator guide](docs/PHASE4-ADMIN-GUIDE.md). Previous release notes remain below.
+# INCUID Chat v1.4.0 — Phase 4.1 + Phase 5
+
+**GitHub-ready source project** for Paper 26.3 and Java 25. See [Player Guide](docs/PHASE5-PLAYER-GUIDE.md) and [Administrator Guide](docs/PHASE5-ADMIN-GUIDE.md) for new commands, upgrade procedure, diagnostics, and channel controls. Complete Phase 1–4 source files remain in the project. Build with `gradle clean test build`; the JAR is placed in `build/libs/`. Build status must be checked in GitHub Actions before deployment.
+
+> **Current release: INCUID Chat 1.3.0 Phase 5** — see [Phase 5 administrator guide](docs/PHASE4-ADMIN-GUIDE.md). Previous release notes remain below.
 
 # INCUID Chat — Phase 2 — viewer-local health and white brackets (v1.1.2-phase2)
 
@@ -22,7 +26,7 @@ Minecraft **Paper 26.3**, **Java 25**, Gradle 9.2.1, Adventure API. No required 
 
 **Messaging aliases:** To avoid conflicts with EssentialsX or vanilla commands, short aliases (`/msg`, `/reply`, `/ignore`, `/unignore`, `/ignorelist`, `/msgtoggle`) are **disabled by default**. Set `private-messages.register-short-aliases: true` before startup only if your server does not use another messaging plugin. The full `/incuid...` commands always work when messaging is enabled. Aliases and command enable/disable are determined at startup and require a restart; formatting settings support `/ic reload`.
 
-**Current limitations:** Ignore/unignore can target online players only; their UUIDs persist after they go offline. Ignore list shows UUIDs for offline players. Reply partner is held in memory during the current online session; it's cleared when someone disconnects. Messaging does not federate across proxy servers. PlaceholderAPI is a soft dependency only and no expansion is registered. Phase 3 join/death/advancement messages and Phase 4 moderation are not included.
+**Current limitations:** Ignore/unignore can target online players only; their UUIDs persist after they go offline. Ignore list shows UUIDs for offline players. Reply partner is held in memory during the current online session; it's cleared when someone disconnects. Messaging does not federate across proxy servers. PlaceholderAPI is a soft dependency only and no expansion is registered. Phase 3 join/death/advancement messages and Phase 5 moderation are not included.
 
 ## Install / upgrade
 
@@ -97,7 +101,7 @@ The `announcements` section of `config.yml` controls join, first join, quit, dea
 **Build:** `gradle clean test build` with Java 25 and Gradle 9.2.1, or use GitHub Actions. A successfully compiled JAR appears in `build/libs/` and is downloadable as the `INCUIDChat-Phase3-JAR` workflow artifact. A green build does not replace in-game verification.
 
 
-## Phase 4 (v1.3.0) — Moderation and softer chat colors
+## Phase 5 (v1.3.0) — Moderation and softer chat colors
 
 INCUID Chat now uses the low-contrast **muted blue-gray `#B8C5D1`** for normal message text. Player names remain white, chat separators are subdued, highlighted mentions and interactive tags keep their accents, and the existing health bar still has white brackets. The original stock `#EEEEEE` config value is upgraded to `#B8C5D1` on startup. Any other custom chat color is preserved.
 
@@ -121,3 +125,8 @@ Permission `incuidchat.moderation.bypass` (OP by default) exempts staff from mut
 ### Validation and deployment
 
 GitHub Actions runs `gradle --no-daemon clean test build` with Java 25 and Gradle 9.2.1, then publishes `INCUIDChat-Phase4-JAR` if successful. **Do not deploy on production without a successful GitHub build and an in-game smoke test.** Back up your `plugins/INCUIDChat` folder before upgrading. The project package is source code, not a compiled JAR.
+
+
+## Automated build verification
+
+See [GitHub Build Verification](docs/GITHUB-BUILD-VERIFICATION.md) for detailed instructions, downloadable build logs, test reports, and JAR artifacts.

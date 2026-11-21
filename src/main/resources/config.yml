@@ -84,12 +84,18 @@ announcements:
     enabled: true
     prefix: '<gold>✦ </gold>'
 
-# AFK status is per player, cleared on reconnect or when chatting.
+# AFK status is per player. Both manual and automatic AFK clear on movement/activity by default.
 # [AFK] brackets are white (#FFFFFF); AFK letters are red (#FF5555).
 afk:
   enabled: true
   clear-on-chat: true
   broadcast: false
+  manual:
+    clear-on-activity: true
+  auto:
+    enabled: true
+    idle-seconds: 300
+    clear-on-activity: true
 
 # Phase 4 — configurable, lightweight moderation. All options can be reloaded.
 # Mutes persist to mutes.yml; moderation actions are appended to moderation.log.
@@ -119,3 +125,20 @@ moderation:
     enabled: true
   clear:
     enabled: true
+
+# Phase 5: default disabled for backwards-compatible public chat.
+channels:
+  enabled: false # Master switch: set true to register /chat, /g, /l and /sc
+  register-shortcuts: true # Registered at server startup; restart after changing this.
+  show-labels: true
+  local:
+    enabled: true # Available to all players when channels.enabled is true
+    radius: 100
+  staff:
+    enabled: true # Operators and users granted incuidchat.staffchat only
+# Diagnostic count-only logging: never logs chat text or player UUIDs.
+diagnostics:
+  recipients:
+    enabled: false
+# Optional idle AFK detection (manual /afk works regardless).
+
