@@ -31,8 +31,10 @@ afk:
   enabled: true
   clear-on-chat: true
   broadcast: false
+  manual:
+    clear-on-activity: true
   auto:
-    enabled: false
+    enabled: true
     idle-seconds: 300
     clear-on-activity: true
 ```
@@ -48,3 +50,7 @@ The repeating inactivity check runs every 20 seconds and uses lightweight UUID t
 - Unit tests cover channel intersection and radius, channel choice normalization, moderation rules, and health calculations. GitHub Actions runs Gradle with Java 25 and uploads the JAR only if compilation and tests succeed.
 
 **Compatibility:** The combined release cannot guarantee compatibility with other chat-formatter, vanish, or moderation plugins without integration tests. Commands invoked with `/g`, `/l`, `/sc` use the server-side chat API, not client-signed chat, and may be treated differently by external moderation plugins.
+
+### AFK activity behavior (v1.4.0 update)
+
+Automatic AFK detection is enabled by default after 300 seconds of inactivity. Both manual `/afk` and automatically detected AFK now clear on player activity by default (`afk.manual.clear-on-activity: true` and `afk.auto.clear-on-activity: true`). Moving into a different block, interacting, or executing a non-AFK command counts as activity. `/afk` itself remains an explicit toggle. Existing `config.yml` values are preserved during migration, so servers whose earlier `afk.auto.enabled` value is `false` must change it to `true` manually if they wish to adopt the new default.
