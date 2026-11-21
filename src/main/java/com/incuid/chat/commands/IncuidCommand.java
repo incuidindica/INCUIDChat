@@ -16,14 +16,16 @@ public final class IncuidCommand implements BasicCommand {
         CommandSender sender=stack.getSender();
         String sub=args.length==0 ? "help" : args[0].toLowerCase(java.util.Locale.ROOT);
         switch (sub) {
-            case "help" -> sender.sendMessage(Component.text("INCUID Chat: /ic help, status, version, reload, healthbar, healthstyle [bars|heart], mentions; /afk; /incuidmsg, /incuidreply, /incuidignore, /incuidunignore, /incuidignorelist, /incuidmsgtoggle"));
-            case "status" -> sender.sendMessage(Component.text("INCUID Chat Phase 3 | Health: " + plugin.settings().healthEnabled()
+            case "help" -> sender.sendMessage(Component.text("INCUID Chat: /ic help, status, version, reload, healthbar, healthstyle [bars|heart], mentions, mute, unmute, clear; /afk; /incuidmsg, /incuidreply, /incuidignore, /incuidunignore, /incuidignorelist, /incuidmsgtoggle"));
+            case "status" -> sender.sendMessage(Component.text("INCUID Chat Phase 4 | Health: " + plugin.settings().healthEnabled()
                     + " | Chat: " + plugin.settings().chatEnabled() + " | Mentions: " + plugin.settings().mentionEnabled()));
-            case "version" -> sender.sendMessage(Component.text("INCUID Chat 1.2.0-phase3 for Paper 26.3"));
+            case "version" -> sender.sendMessage(Component.text("INCUID Chat 1.3.0-phase4 for Paper 26.3"));
             case "reload" -> {
                 if (!sender.hasPermission("incuidchat.reload") && !sender.hasPermission("incuidchat.admin")) { deny(sender); return; }
                 plugin.reloadSettings(); sender.sendMessage(Component.text("INCUID Chat configuration reloaded."));
             }
+            case "mute", "unmute", "clear" -> plugin.moderationCommands().execute(sender,sub,
+                    java.util.Arrays.copyOfRange(args,1,args.length));
             case "healthbar" -> {
                 if (!(sender instanceof Player player)) { sender.sendMessage(Component.text("Players only.")); return; }
                 if (!player.hasPermission("incuidchat.health.hide") || !plugin.settings().allowHealthToggle()) { deny(sender); return; }
@@ -63,9 +65,11 @@ public final class IncuidCommand implements BasicCommand {
                     .filter(s -> s.startsWith(args[1].toLowerCase(java.util.Locale.ROOT))).toList();
         }
         if (args.length != 1) return List.of();
-        return List.of("help","status","version","reload","healthbar","healthstyle","mentions").stream()
+        return List.of("help","status","version","reload","healthbar","healthstyle","mentions","mute","unmute","clear").stream()
             .filter(s -> s.startsWith(args[0].toLowerCase(java.util.Locale.ROOT)))
             .filter(s -> !s.equals("reload") || stack.getSender().hasPermission("incuidchat.reload"))
+            .filter(s -> !(s.equals("mute") || s.equals("unmute")) || stack.getSender().hasPermission("incuidchat.moderation.mute") || stack.getSender().hasPermission("incuidchat.moderation.unmute") || stack.getSender().hasPermission("incuidchat.admin"))
+            .filter(s -> !s.equals("clear") || stack.getSender().hasPermission("incuidchat.moderation.clear") || stack.getSender().hasPermission("incuidchat.admin"))
             .filter(s -> !s.equals("healthstyle") || stack.getSender().hasPermission("incuidchat.health.style"))
             .toList();
     }

@@ -24,7 +24,7 @@ public record ChatSettings(boolean chatEnabled, boolean healthEnabled, String fi
                 color(c.getString("health.colors.critical"),"#FF5555"), color(c.getString("health.colors.dead"),"#555555"),
                 color(c.getString("health.colors.empty"),"#555555"),
                 c.getString("chat.separator", " » "), color(c.getString("chat.player-color"),"#FFFFFF"),
-                color(c.getString("chat.message-color"),"#EEEEEE"), c.getBoolean("chat.name-hover",true),
+                color(c.getString("chat.message-color"),"#B8C5D1"), c.getBoolean("chat.name-hover",true),
                 c.getBoolean("chat.name-click-suggest-msg",true), c.getBoolean("mentions.enabled",true),
                 color(c.getString("mentions.highlight-color"),"#FFAA00"),
                 c.getString("mentions.sound", "BLOCK_NOTE_BLOCK_PLING"), Math.max(0,c.getInt("mentions.cooldown-seconds",10)),

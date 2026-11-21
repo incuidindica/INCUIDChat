@@ -12,6 +12,10 @@ import com.incuid.chat.storage.PlayerPreferences;
 import com.incuid.chat.interactive.InteractiveTags;
 import com.incuid.chat.interactive.ChatPipeline;
 import com.incuid.chat.messaging.MessageService;
+import com.incuid.chat.moderation.ModerationService;
+import com.incuid.chat.moderation.ModerationCommands;
+import io.papermc.paper.command.brigadier.BasicCommand;
+import io.papermc.paper.command.brigadier.CommandSourceStack;
 import io.papermc.paper.event.player.AsyncChatEvent;
 import org.bukkit.Bukkit;
 import org.bukkit.Sound;
@@ -31,18 +35,45 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     private PlayerPreferences preferences;
     private MessageService messages;
     private AfkService afk;
+    private ModerationService moderation;
+    private ModerationCommands moderationCommands;
     private final ConcurrentMap<UUID,Long> mentionCooldown = new ConcurrentHashMap<>();
     private final ConcurrentMap<UUID,Long> everyoneCooldown = new ConcurrentHashMap<>();
 
     @Override public void onEnable() {
         saveDefaultConfig();
+        // Migrate the legacy stock near-white text; do not change any other custom color.
+        if ("#EEEEEE".equalsIgnoreCase(getConfig().getString("chat.message-color",""))) {
+            getConfig().set("chat.message-color","#B8C5D1");
+            // Preserve comments and other administrator edits: change only the exact old stock line.
+            java.nio.file.Path configFile = new java.io.File(getDataFolder(),"config.yml").toPath();
+            try {
+                String original = java.nio.file.Files.readString(configFile);
+                String updated = original.replace("message-color: '#EEEEEE'", "message-color: '#B8C5D1'")
+                        .replace("message-color: \"#EEEEEE\"", "message-color: \"#B8C5D1\"");
+                if (!updated.equals(original)) java.nio.file.Files.writeString(configFile,updated);
+            } catch (java.io.IOException ex) {
+                getLogger().warning("Legacy chat color updated in memory, but could not persist config.yml: " + ex.getMessage());
+            }
+            getLogger().info("Updated legacy default chat text color to muted blue-gray (#B8C5D1).");
+        }
         for (String path : List.of("messages.yml","formats.yml","filters.yml")) {
             if (!new java.io.File(getDataFolder(),path).isFile()) saveResource(path,false);
         }
         reloadSettings();
         preferences = new PlayerPreferences(this);
         afk = new AfkService(this);
+        moderation = new ModerationService(this);
+        moderationCommands = new ModerationCommands(this,moderation);
         messages = new MessageService(this,preferences,afk);
+        Bukkit.getPluginManager().registerEvents(moderation,this);
+        for (String action : List.of("mute","unmute","clear")) {
+            registerCommand("incuid"+action,"INCUID moderation: "+action,List.of(),new BasicCommand() {
+                @Override public void execute(CommandSourceStack stack,String[] args) {
+                    moderationCommands.execute(stack.getSender(),action,args);
+                }
+            });
+        }
         Bukkit.getPluginManager().registerEvents(afk,this);
         Bukkit.getPluginManager().registerEvents(new CommunityAnnouncements(this),this);
         registerCommand("afk","Toggle away-from-keyboard status",List.of(),afk);
@@ -56,11 +87,12 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
             registerCommand("incuidignorelist","List ignored players",shortAliases("ignorelist"),messages.command("ignorelist"));
             registerCommand("incuidmsgtoggle","Toggle messages",shortAliases("msgtoggle"),messages.command("msgtoggle"));
         }
-        getLogger().info("INCUID Chat Phase 3 enabled (community announcements, AFK, interactive chat)");
+        getLogger().info("INCUID Chat Phase 4 enabled (moderation, community, interactive chat)");
     }
     public void reloadSettings() {
         reloadConfig();
         settings = ChatSettings.load(getConfig());
+        if (moderation != null) moderation.reload();
         if (afk != null && !getConfig().getBoolean("afk.enabled",true)) afk.shutdown();
         interactiveConfig = new InteractiveConfig(
                 getConfig().getBoolean("interactive.items.enabled",true),
@@ -86,6 +118,8 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
     public boolean isHealthHidden(UUID id) { return preferences.get(id).hideHealth(); }
     public boolean toggleMentions(UUID id) { return preferences.toggleMentions(id); }
     public PlayerPreferences preferences() { return preferences; }
+    public ModerationService moderation() { return moderation; }
+    public ModerationCommands moderationCommands() { return moderationCommands; }
 
     @EventHandler(priority=EventPriority.HIGH,ignoreCancelled=true)
     public void onChat(AsyncChatEvent event) {
@@ -169,11 +203,13 @@ public final class IncuidChatPlugin extends JavaPlugin implements Listener {
         mentionCooldown.remove(id);
         everyoneCooldown.remove(id);
         messages.quit(id);
+        if (moderation!=null) moderation.forget(id);
     }
     @Override public void onDisable() {
         mentionCooldown.clear(); everyoneCooldown.clear();
         if (afk != null) afk.shutdown();
         if (messages != null) messages.close();
         if (preferences != null) preferences.close();
+        if (moderation != null) moderation.close();
     }
 }

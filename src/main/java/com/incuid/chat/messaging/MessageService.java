@@ -31,6 +31,10 @@ public final class MessageService {
     }
     private static String text(String[] args,int from) { return String.join(" ",Arrays.copyOfRange(args,from,args.length)); }
     private void send(Player source,Player target,String content) {
+        String mute = plugin.moderation().muteReason(source.getUniqueId());
+        if (mute != null && !source.hasPermission("incuidchat.moderation.bypass")) {
+            say(source,"You are muted: "+mute); return;
+        }
         if (!source.canSee(target)) { say(source,"Player is not available.");return; }
         String problem = MessageRules.problem(source.getUniqueId(),target.getUniqueId(),content);
         if (problem != null) { say(source,problem);return; }

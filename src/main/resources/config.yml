@@ -1,4 +1,4 @@
-# INCUID Chat — Phase 2. Changes apply with /ic reload.
+# INCUID Chat — Phase 4. Changes apply with /ic reload.
 health:
   enabled: true
   segments: 10 # Version 1 supports 10 segments only.
@@ -26,7 +26,7 @@ chat:
   enabled: true
   separator: ' » '
   player-color: '#FFFFFF'
-  message-color: '#EEEEEE'
+  message-color: '#B8C5D1' # Soft blue-gray: readable without a wall of white text
   name-hover: true
   name-click-suggest-msg: true
   allow-permission-colors: false # Reserved for a later release
@@ -90,3 +90,32 @@ afk:
   enabled: true
   clear-on-chat: true
   broadcast: false
+
+# Phase 4 — configurable, lightweight moderation. All options can be reloaded.
+# Mutes persist to mutes.yml; moderation actions are appended to moderation.log.
+moderation:
+  enabled: true
+  spam:
+    max-length: 512
+    cooldown:
+      enabled: true
+      milliseconds: 1100
+    duplicate:
+      enabled: true
+      window-seconds: 15
+    repeated-characters:
+      enabled: true
+      limit: 12
+    flood:
+      enabled: true
+      window-seconds: 10
+      max-messages: 6
+  filter:
+    enabled: false # Opt in before adding blocked words to filters.yml
+    action: cancel # cancel, replace, notify
+    replacement: '***'
+    notify-staff: true
+  mutes:
+    enabled: true
+  clear:
+    enabled: true

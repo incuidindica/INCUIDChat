@@ -30,7 +30,10 @@ public final class ChatFormatter {
         if (s.clickNames()) name = name.clickEvent(ClickEvent.suggestCommand("/msg " + p.username() + " "));
         result = result.append(name);
         if (s.luckSuffix()) result = result.append(safeMeta(p.suffix()));
-        return result.append(Component.text(s.separator())).append(message.colorIfAbsent(TextColor.fromHexString(s.messageColor())));
+        // Text fragments in the pipeline may have child components. Adventure inheritance
+        // applies this parent color to uncolored descendants without changing mention/item accents.
+        Component coloredMessage=Component.empty().color(TextColor.fromHexString(s.messageColor())).append(message);
+        return result.append(Component.text(s.separator(),TextColor.color(0x89949D))).append(coloredMessage);
     }
     private static Component safeMeta(String value) {
         // LuckPerms metadata is administrator-managed. No click/hover tags are parsed here.

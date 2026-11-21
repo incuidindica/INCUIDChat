@@ -1,3 +1,5 @@
+> **Current release: INCUID Chat 1.3.0 Phase 4** — see [Phase 4 administrator guide](docs/PHASE4-ADMIN-GUIDE.md). Previous release notes remain below.
+
 # INCUID Chat — Phase 2 — viewer-local health and white brackets (v1.1.2-phase2)
 
 Minecraft **Paper 26.3**, **Java 25**, Gradle 9.2.1, Adventure API. No required companion plugins. LuckPerms optional.
@@ -93,3 +95,29 @@ The `announcements` section of `config.yml` controls join, first join, quit, dea
 **Compatibility:** Other plugins that change Tab-list names while a player is AFK may compete with the saved/restored component; if you run a Tab formatting plugin, check integration behavior in-game. Other join/death/advancement formatters may also override event messages, so avoid enabling competing modules twice.
 
 **Build:** `gradle clean test build` with Java 25 and Gradle 9.2.1, or use GitHub Actions. A successfully compiled JAR appears in `build/libs/` and is downloadable as the `INCUIDChat-Phase3-JAR` workflow artifact. A green build does not replace in-game verification.
+
+
+## Phase 4 (v1.3.0) — Moderation and softer chat colors
+
+INCUID Chat now uses the low-contrast **muted blue-gray `#B8C5D1`** for normal message text. Player names remain white, chat separators are subdued, highlighted mentions and interactive tags keep their accents, and the existing health bar still has white brackets. The original stock `#EEEEEE` config value is upgraded to `#B8C5D1` on startup. Any other custom chat color is preserved.
+
+### Moderation commands
+
+| Command | Permission | Purpose |
+|---|---|---|
+| `/ic mute <player> [30m|2h|1d|permanent] [reason]` | `incuidchat.moderation.mute` | Temporary or permanent mute; accepts players already known to the server |
+| `/ic unmute <player>` | `incuidchat.moderation.unmute` | Remove a mute |
+| `/ic clear` | `incuidchat.moderation.clear` | Push old chat out of view for currently online players; does not delete history |
+| `/incuidmute`, `/incuidunmute`, `/incuidclear` | Same respective permissions | Unambiguous alternatives if another plugin claims `/ic` |
+
+Permission `incuidchat.moderation.bypass` (OP by default) exempts staff from mutes and spam limits; `incuidchat.moderation.notify` receives filter-match notices. All moderation permissions default to OP; change them with LuckPerms as needed. Mutes are recorded by UUID in `plugins/INCUIDChat/mutes.yml`, while moderator mute/unmute/clear actions go into `moderation.log` via asynchronous I/O. Please protect these files and back them up. When using private messaging through INCUID, muted players cannot send private messages either; other plugins' messaging commands are outside its control.
+
+### Spam and filter settings
+
+`config.yml` provides independent switches for message cooldown (default 1100 ms), duplicate detection (15 s), repeated-character protection (12 consecutive identical Unicode code points), flood detection (6 messages in 10 s), and max message length (512 characters). Staff can bypass limits. Blocked literal words are listed in `filters.yml` (empty by default). Filtering is **off by default** until configured. With filtering enabled, choose `moderation.filter.action` from `cancel` (default), `notify`, or `replace`; replacement changes the message and **can affect signed chat verification**. `cancel` avoids modifying signed content. Word matches are case-insensitive and use Unicode boundaries, not raw untrusted regex.
+
+`/ic reload` reloads the new moderation switches and the file-based filter list, without erasing active mutes. Mutes expire lazily when a player attempts to chat or send an INCUID private message. Filtering and spam control apply to public chat only; mute restrictions also apply to INCUID private messaging. The chat clear operation is cosmetic (cannot remove messages already displayed on clients). External moderation/chat plugins can conflict and should be configured so only one system owns the desired behavior.
+
+### Validation and deployment
+
+GitHub Actions runs `gradle --no-daemon clean test build` with Java 25 and Gradle 9.2.1, then publishes `INCUIDChat-Phase4-JAR` if successful. **Do not deploy on production without a successful GitHub build and an in-game smoke test.** Back up your `plugins/INCUIDChat` folder before upgrading. The project package is source code, not a compiled JAR.
