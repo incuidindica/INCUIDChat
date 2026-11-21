@@ -4,7 +4,7 @@ INCUID Chat is designed to behave like ordinary Minecraft public chat until the 
 
 ## Chat channels
 
-By default `channels.enabled: false`, so messages are public as before. An administrator can enable `channels.enabled` and independently enable `channels.local.enabled` and `channels.staff.enabled`.
+By default `channels.enabled: false`, so messages are public as before. When an administrator enables `channels.enabled: true`, local and staff channel modules are enabled by default on new installations. Local is available to every player; staff is restricted to operators and players explicitly granted `incuidchat.staffchat`. Existing installations that saved `channels.local.enabled: false` or `channels.staff.enabled: false` must set them to `true` manually because upgrades preserve saved settings.
 
 - `/chat` — shows your active channel.
 - `/chat global` — make ordinary messages global. Everyone permitted to receive public chat sees them.
